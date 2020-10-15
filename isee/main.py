@@ -7,17 +7,16 @@ This script handles the primary loop of building and submitting jobs in independ
 to execute various interfaced/abstracted commands.
 """
 
-import sys
-import os
-import shutil
-import pickle
 import copy
+import os
+import pickle
+import shutil
+import sys
 import time
-from isee import configure
-from isee import process
 from isee import interpret
-from isee import utilities
-from isee.infrastructure import factory
+from isee import process
+from isee.infrastructure import factory, configure
+
 
 class Thread(object):
     """
