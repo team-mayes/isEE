@@ -40,7 +40,7 @@ def configure(input_file, user_working_directory=''):
         # argparse.Namelist object, just for convenience.
 
         # Core settings required for all jobs
-        job_type: str
+        job_type: str = 'isEE'
         batch_system: str
         restart: bool
         md_engine: str = 'amber'
@@ -61,6 +61,10 @@ def configure(input_file, user_working_directory=''):
         # File path settings (required for all jobs, but do have sensible defaults)
         path_to_input_files: str = os.path.dirname(os.path.realpath(__file__)) + '/data/input_files'
         path_to_templates: str = os.path.dirname(os.path.realpath(__file__)) + '/data/templates'
+
+        # Settings for isEE algorithm
+        degeneracy: int = 0
+        initial_coordinates: list = ['']
 
         # Script for algorithm = 'script'
         mutation_script: list = []

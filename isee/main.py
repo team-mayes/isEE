@@ -43,7 +43,6 @@ class Thread(object):
         self.current_type = []          # list of job types for the present step of this thread
         self.current_name = []          # list of job names corresponding to the job types
         self.current_results = []       # results of each job, if applicable
-        self.name = ''                  # name of current step
         self.suffix = 0                 # index of current step
         self.total_moves = 0            # running total of "moves" attributable to this thread
         self.accept_moves = 0           # running total of "accepted" "moves", as defined by JobType.update_results
@@ -118,11 +117,11 @@ def init_threads(settings):
     jobtype = factory.jobtype_factory(settings.job_type)
 
     # Set topology properly even if it's given as a path
-    og_prmtop = settings.topology
-    if '/' in settings.topology:
-        settings.topology = settings.topology[settings.topology.rindex('/') + 1:]
+    og_prmtop = settings.init_topology
+    if '/' in settings.init_topology:
+        settings.init_topology = settings.init_topology[settings.init_topology.rindex('/') + 1:]
     try:
-        shutil.copy(og_prmtop, settings.working_directory + '/' + settings.topology)
+        shutil.copy(og_prmtop, settings.working_directory + '/' + settings.init_topology)
     except shutil.SameFileError:
         pass
 
@@ -134,9 +133,8 @@ def init_threads(settings):
 
         jobtype.update_history(thread, settings, **{'initialize': True, 'inpcrd': file})    # initialize thread.history
 
-        thread.history.tops = [settings.topology]
+        thread.history.tops = [settings.init_topology]   # todo: settings.init_topology also needs to be a list now
 
-        thread.name = file + '_' + str(thread.suffix)
         allthreads.append(thread)
 
     return allthreads

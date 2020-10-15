@@ -32,6 +32,27 @@ class JobType(abc.ABC):
     """
 
     @abc.abstractmethod
+    def get_initial_coordinates(self, settings):
+        """
+        Obtain list of initial coordinate files and copy them to the working directory.
+
+        Parameters
+        ----------
+        self : Thread
+            Methods in the JobType abstract base class are intended to be invoked by Thread objects
+        settings : argparse.Namespace
+            Settings namespace object
+
+        Returns
+        -------
+        initial_coordinates : list
+            List of strings naming the applicable initial coordinate files that were copied to the working directory
+
+        """
+
+        pass
+
+    @abc.abstractmethod
     def get_next_step(self, settings):
         """
         Determine and return name for next step in the thread given by "self"
@@ -193,6 +214,27 @@ class isEE(JobType):
     off on simplifying the JobType class to only this implementation for now in case that changes
 
     """
+
+    def get_initial_coordinates(self, settings):
+        list_to_return = []
+        for item in settings.initial_coordinates:
+            if settings.degeneracy > 1:     # implements degeneracy option
+                og_item = item
+                if '/' in item:
+                    item = item[item.rindex('/') + 1:]
+                list_to_return += [item + '_' + str(this_index) for this_index in range(settings.degeneracy)]
+                for file_to_make in list_to_return:
+                    shutil.copy(og_item, settings.working_directory + '/' + file_to_make)
+            else:
+                og_item = item
+                if '/' in item:
+                    item = item[item.rindex('/') + 1:]
+                list_to_return += [item]
+                try:
+                    shutil.copy(og_item, settings.working_directory + '/' + item)
+                except shutil.SameFileError:
+                    pass
+        return list_to_return
 
     def get_next_step(self, settings):
         return 'prod'   # todo: consider cutting this method (only keeping it at the moment to contrast with minimization steps, but I might end up not keeping those output files around)
