@@ -4,7 +4,7 @@ implementing the calls to JobType methods to control the value of the thread.coo
 """
 
 import pickle
-from atesa import factory
+from isee.infrastructure import factory
 
 def interpret(thread, allthreads, running, settings):
     """

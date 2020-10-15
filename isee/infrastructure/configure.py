@@ -15,7 +15,6 @@ import pickle
 from jinja2 import Environment, FileSystemLoader
 import typing
 import pydantic
-from atesa import auto_cvs
 
 def configure(input_file, user_working_directory=''):
     """
