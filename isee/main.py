@@ -1,0 +1,276 @@
+"""
+main.py
+Version 2 of Aimless Transition Ensemble Sampling and Analysis refactors the code to make it portable, extensible, and 
+flexible.
+
+This script handles the primary loop of building and submitting jobs in independent Threads, using the methods thereof 
+to execute various interfaced/abstracted commands.
+"""
+
+import sys
+import os
+import shutil
+import pickle
+import copy
+import time
+from isee import configure
+from isee import process
+from isee import interpret
+from isee import utilities
+from isee.infrastructure import factory
+
+class Thread(object):
+    """
+    Object representing a series of simulations and containing the relevant information to define its current state.
+
+    Threads represent the level on which ATESA is parallelized. This flexible object is used for every type of job
+    performed by ATESA.
+
+    Parameters
+    ----------
+    settings : argparse.Namespace
+        Settings namespace object
+
+    Returns
+    -------
+    None
+
+    """
+
+    def __init__(self):
+        self.jobids = []                # list of jobids associated with the present step of this thread
+        self.terminated = False         # boolean indicating whether the thread has reached a termination criterion
+        self.current_type = []          # list of job types for the present step of this thread
+        self.current_name = []          # list of job names corresponding to the job types
+        self.current_results = []       # results of each job, if applicable
+        self.name = ''                  # name of current step
+        self.suffix = 0                 # index of current step
+        self.total_moves = 0            # running total of "moves" attributable to this thread
+        self.accept_moves = 0           # running total of "accepted" "moves", as defined by JobType.update_results
+        self.status = 'fresh thread'    # tag for current status of a thread
+        self.skip_update = False        # used by restart to resubmit jobs as they were rather than doing the next step
+
+    def process(self, running, settings):
+        return process.process(self, running, settings)
+
+    def interpret(self, allthreads, running, settings):
+        return interpret.interpret(self, allthreads, running, settings)
+
+    def gatekeeper(self, settings):
+        jobtype = factory.jobtype_factory(settings.job_type)
+        return jobtype.gatekeeper(self, settings)
+
+    def get_next_step(self, settings):
+        jobtype = factory.jobtype_factory(settings.job_type)
+        self.current_name = jobtype.get_next_step(self, settings)
+        return self.current_name
+
+    def get_batch_template(self, type, settings):
+        jobtype = factory.jobtype_factory(settings.job_type)
+        return jobtype.get_batch_template(self, type, settings)
+
+    def get_frame(self, traj, frame, settings):
+        mdengine = factory.mdengine_factory(settings.md_engine)
+        return mdengine.get_frame(self, traj, frame, settings)
+
+    def get_status(self, job_index, settings):
+        batchsystem = factory.batchsystem_factory(settings.batch_system)
+        return batchsystem.get_status(self, self.jobids[job_index], settings)
+
+    def cancel_job(self, job_index, settings):
+        batchsystem = factory.batchsystem_factory(settings.batch_system)
+        batchsystem.cancel_job(self, self.jobids[job_index], settings)
+
+
+def init_threads(settings):
+    """
+    Initialize all the Thread objects called for by the user input file.
+
+    In the case where settings.restart == True, this involves unpickling restart.pkl; otherwise, brand new objects are
+    produced in accordance with settings.job_type (aimless_shooting, committor_analysis, equilibrium_path_sampling, or
+    isee).
+
+    Parameters
+    ----------
+    settings : argparse.Namespace
+        Settings namespace object
+
+    Returns
+    -------
+    allthreads : list
+        List of all Thread objects, including those for which no further tasks are scheduled.
+
+    """
+
+    if settings.restart:
+        allthreads = pickle.load(open(settings.working_directory + '/restart.pkl', 'rb'))
+        for thread in allthreads:
+            if not thread.current_type == []:
+                thread.skip_update = True
+        if settings.restart_terminated_threads:
+            for thread in allthreads:
+                thread.terminated = False
+
+        return allthreads
+
+    # If not restart:
+    allthreads = []
+    jobtype = factory.jobtype_factory(settings.job_type)
+
+    # Set topology properly even if it's given as a path
+    og_prmtop = settings.topology
+    if '/' in settings.topology:
+        settings.topology = settings.topology[settings.topology.rindex('/') + 1:]
+    try:
+        shutil.copy(og_prmtop, settings.working_directory + '/' + settings.topology)
+    except shutil.SameFileError:
+        pass
+
+    for file in jobtype.get_initial_coordinates(None, settings):
+        if '/' in file:
+            file = file[file.rindex('/') + 1:]          # drop path to file from filename
+
+        thread = Thread()   # initialize the thread object
+
+        jobtype.update_history(thread, settings, **{'initialize': True, 'inpcrd': file})    # initialize thread.history
+
+        thread.history.tops = [settings.topology]
+
+        thread.name = file + '_' + str(thread.suffix)
+        allthreads.append(thread)
+
+    return allthreads
+
+
+def handle_loop_exception(running, settings):
+    """
+    Handle cancellation of jobs after encountering an exception.
+
+    Parameters
+    ----------
+    running : list
+        List of Thread objects that are currently running. These are the threads that will be canceled if the ATESA run
+        cannot be rescued.
+    settings : argparse.Namespace
+        Settings namespace object
+
+    Returns
+    -------
+    None
+
+    """
+
+    print('\nCancelling currently running batch jobs belonging to this process in order to '
+          'preserve resources.')
+    for thread in running:
+        try:
+            for job_index in range(len(thread.jobids)):
+                thread.cancel_job(job_index, settings)
+        except Exception as little_e:
+            print('\nEncountered exception while attempting to cancel a job: ' + str(little_e) +
+                  '\nIgnoring and continuing...')
+
+    raise RuntimeError('Job cancellation complete, ATESA is now shutting down.')
+
+
+def main(settings, rescue_running=[]):
+    """
+    Perform the primary loop of building, submitting, monitoring, and analyzing jobs.
+
+    This function works via a loop of calls to thread.process and thread.interpret for each thread that hasn't
+    terminated, until either the global termination criterion is met or all the individual threads have completed.
+
+    Parameters
+    ----------
+    settings : argparse.Namespace
+        Settings namespace object
+    rescue_running : list
+        List of threads passed in from handle_loop_exception, containing running threads. If given, setup is skipped and
+        the function proceeds directly to the main loop.
+
+    Returns
+    -------
+    None
+
+    """
+
+    # Make working directory if it does not exist, handling overwrite and restart as needed
+    if os.path.exists(settings.working_directory):
+        if settings.overwrite and not settings.restart:
+            shutil.rmtree(settings.working_directory)
+            os.mkdir(settings.working_directory)
+        elif not settings.restart:
+            raise RuntimeError('Working directory ' + settings.working_directory + ' already exists, but overwrite '
+                               '= False and restart = False. Either change one of these two settings or choose a '
+                               'different working directory.')
+    else:
+        if not settings.restart:
+            os.mkdir(settings.working_directory)
+        else:
+            raise RuntimeError('Working directory ' + settings.working_directory + ' does not yet exist, but '
+                               'restart = True.')
+
+    # Store settings object in the working directory for compatibility with analysis/utility scripts
+    if not settings.dont_dump:
+        temp_settings = copy.deepcopy(settings)  # initialize temporary copy of settings to modify
+        temp_settings.__dict__.pop('env')  # env attribute is not picklable
+        pickle.dump(temp_settings, open(settings.working_directory + '/settings.pkl', 'wb'), protocol=2)
+
+    # Build or load threads
+    allthreads = init_threads(settings)
+
+    # Move runtime to working directory
+    os.chdir(settings.working_directory)
+
+    running = allthreads.copy()     # to be pruned later by thread.process()
+    termination_criterion = False   # initialize global termination criterion boolean
+
+    # Initialize threads with first process step
+    try:
+        for thread in allthreads:
+            running = thread.process(running, settings)
+    except Exception as e:
+        if settings.restart:
+            print('The following error occurred while attempting to initialize threads from restart.pkl. It may be '
+                  'corrupted.')
+        raise e
+
+    # Begin main loop
+    # This whole thing is in a try-except block to handle cancellation of jobs when the code crashes in any way
+    try:
+        while (not termination_criterion) and running:
+            for thread in running:
+                if thread.gatekeeper(settings):
+                    termination_criterion, running = thread.interpret(allthreads, running, settings)
+                    if termination_criterion:
+                        for thread in running:    # todo: should I replace this with something to finish up running jobs and just block submission of new ones?
+                            for job_index in range(len(thread.current_type)):
+                                thread.cancel_job(job_index, settings)
+                        running = []
+                        break
+                    running = thread.process(running, settings)
+                else:
+                    time.sleep(30)  # to prevent too-frequent calls to batch system by thread.gatekeeper
+
+    except Exception as e:  # catch arbitrary exceptions in the main loop so we can cancel jobs
+        print(str(e))
+        handle_loop_exception(running, settings)
+
+    if termination_criterion:
+        return 'isEE run exiting normally (global termination criterion met)'
+    else:
+        return 'isEE run exiting normally (all threads ended individually)'
+
+
+def run_main():
+    # Obtain settings namespace, initialize threads, and move promptly into main.
+    try:
+        working_directory = sys.argv[2]
+    except IndexError:
+        working_directory = ''
+    settings = configure.configure(sys.argv[1], working_directory)
+    exit_message = main(settings)
+    print(exit_message)
+
+if __name__ == "__main__":
+    run_main()
