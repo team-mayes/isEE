@@ -37,6 +37,7 @@ class Thread(object):
     """
 
     def __init__(self):
+        self.name = ''
         self.jobids = []                # list of jobids associated with the present step of this thread
         self.terminated = False         # boolean indicating whether the thread has reached a termination criterion
         self.current_type = []          # list of job types for the present step of this thread
@@ -63,9 +64,9 @@ class Thread(object):
         self.current_name = jobtype.get_next_step(self, settings)
         return self.current_name
 
-    def get_batch_template(self, type, settings):
+    def get_batch_template(self, settings):
         jobtype = factory.jobtype_factory(settings.job_type)
-        return jobtype.get_batch_template(self, type, settings)
+        return jobtype.get_batch_template(self, settings)
 
     def get_frame(self, traj, frame, settings):
         mdengine = factory.mdengine_factory(settings.md_engine)
@@ -133,6 +134,8 @@ def init_threads(settings):
         jobtype.update_history(thread, settings, **{'initialize': True, 'inpcrd': file})    # initialize thread.history
 
         thread.history.tops = [settings.init_topology]   # todo: settings.init_topology also needs to be a list now
+
+        thread.name = file
 
         allthreads.append(thread)
 

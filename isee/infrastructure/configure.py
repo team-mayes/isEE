@@ -61,12 +61,15 @@ def configure(input_file, user_working_directory=''):
         path_to_input_files: str = os.path.dirname(os.path.realpath(__file__)) + '/data/input_files'
         path_to_templates: str = os.path.dirname(os.path.realpath(__file__)) + '/data/templates'
 
-        # Settings for isEE algorithm
+        # Settings for isEE jobtype
         degeneracy: int = 0
         initial_coordinates: list = ['']
 
-        # Script for algorithm = 'script'
-        mutation_script: list = []
+        # For algorithm = 'script'
+        mutation_script: list
+
+        # For algorithm = 'covariance_saturation'
+        covariance_reference_resid: int
 
         # Linear Interaction Energy parameters
         ts_mask: str = ''

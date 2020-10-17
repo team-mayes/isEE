@@ -91,6 +91,4 @@ def process(thread, running, settings):
 
     if thread not in running:
         running.append(thread)
-    else:
-        raise RuntimeError('thread somehow already in running: ' + thread.current_name)
     return running

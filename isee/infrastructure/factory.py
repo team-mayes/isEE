@@ -121,7 +121,8 @@ def algorithm_factory(algorithm_toolkit):
 
     """
 
-    algorithm_toolkits = {'script': taskmanager.AdaptScript}
+    algorithm_toolkits = {'script': taskmanager.Script,
+                          'covariance_saturation': taskmanager.CovarianceSaturation}
 
     if algorithm_toolkit not in algorithm_toolkits.keys():
         raise ValueError('unsupported Algorithm name: ' + algorithm_toolkit)

@@ -207,6 +207,27 @@ class JobType(abc.ABC):
 
         pass
 
+    @abc.abstractmethod
+    def gatekeeper(self, settings):
+        """
+        Return boolean indicating whether job is ready for next interpretation step.
+
+        Parameters
+        ----------
+        self : Thread
+            Methods in the JobType abstract base class are intended to be invoked by Thread objects
+        settings : argparse.Namespace
+            Settings namespace object
+
+        Returns
+        -------
+        status : bool
+            If True, ready for next interpretation step; otherwise, False
+
+        """
+
+        pass
+
 
 class isEE(JobType):
     """
@@ -296,3 +317,10 @@ class isEE(JobType):
         self.suffix += 1
 
         return False
+
+    def gatekeeper(self, settings):
+        # if job for this thread has status 'C'ompleted/'C'anceled...
+        if self.get_status(job_index, settings) == 'C':
+            return True
+        else:
+            return False

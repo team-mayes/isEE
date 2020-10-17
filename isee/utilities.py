@@ -1,6 +1,6 @@
 """
-Utility functions that don't properly fit anywhere else. These are operations that aren't specific to any particular
-interface or script.
+Utility functions implemented here are clearly defined unit operations. They may only be called once in the code, but
+are defined separately for cleanliness and legibility.
 """
 
 import sys
@@ -71,6 +71,7 @@ def update_progress(progress, message='Progress', eta=0, quiet=False):
         text = "\r" + message + ": [{0}] {1}% {2}".format("#" * block + "-" * (barLength - block), round(progress * 100, 2), status)
     sys.stdout.write(text)
     sys.stdout.flush()
+
 
 def lie(trajectory, topology, settings):
     """
@@ -327,6 +328,34 @@ def mutate(coords, topology, mutation, settings):
         os.rename(new_name + '_min.rst7.1', new_name + '_min.rst7')
 
     return new_name + '_min.rst7', mutated_top
+
+
+def covariance_profile(thread, move_index, resid, settings):
+    """
+    Calculate and return the covariance profile for the residue given by resid, in reference to the one given by
+    settings.covariance_reference_resid. The trajectory and topology are taken from the move_index'th step in thread.
+
+    Parameters
+    ----------
+    thread : Thread
+        Thread on which to operate
+    move_index : int
+        Index of step within thread to operate on. Negative values are supported, to read from the end.
+    resid : int
+        resid of residue within the trajectory to calculate the profile for
+    settings : argparse.Namespace
+        Settings namespace object
+
+    Returns
+    -------
+    covariance_profile : list
+        List of covariance between resid and each other protein residue corresponding to the list index
+
+    """
+
+    # todo: implement
+
+    pass
 
 
 if __name__ == '__main__':

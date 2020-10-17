@@ -39,7 +39,7 @@ class Algorithm(abc.ABC):
         pass
 
 
-class AdaptScript(Algorithm):
+class Script(Algorithm):
     """
     Adapter class for the "algorithm" that is simply following the "script" of mutations prescribed by the user in the
     settings.mutation_script list.
@@ -52,3 +52,28 @@ class AdaptScript(Algorithm):
             return untried[0]   # first untried mutation
         except IndexError:  # no untried mutation remains
             return 'TER'
+
+
+class CovarianceSaturation(Algorithm):
+    """
+    Adapter class for algorithm that finds the residue with the minimum RMSD of covariance profile within the enzyme and
+    then performs saturation mutagenesis before repeating.
+
+    RMSD reference is determined by settings.covariance_reference_resid
+
+    """
+
+    def get_next_step(self, thread, settings):
+        all_resnames = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA', 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP']
+
+        if thread.history.muts == []:   # first ever mutation
+            saturation = True   # saturation = True means: pick a new residue to mutate
+        elif set([item[-3:] for item in thread.history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames))\
+                and all([item[:-3] == thread.history.muts[-1][:-3] for item in thread.history.muts[-1 * (len(all_resnames) - 1):]]):
+            saturation = True
+        else:
+            saturation = False
+
+        if saturation:
+            # Perform RMSD profile analysis
+            pass
