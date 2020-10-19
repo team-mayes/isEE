@@ -271,9 +271,9 @@ def mutate(coords, topology, mutation, settings):
     system.output_prefix = new_name
     system.template_lines = [
         'source leaprc.protein.ff14SB',
-        'source leaprc.water.tip3p',
-        'source 171116_FPA_4NP-Xyl_ff.leaprc',   # todo: any way around requiring a custom force field file?
-        'loadOff atomic_ions.lib',
+        'source leaprc.water.tip3p'] + \
+        ['source ' + item for item in settings.paths_to_forcefields] + \
+        ['loadOff atomic_ions.lib',
         'mut = loadpdb mutated.pdb',
         'nonprot = loadmol2 nonprot.mol2',
         'model = combine { mut nonprot }',

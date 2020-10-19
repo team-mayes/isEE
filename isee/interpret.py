@@ -31,8 +31,8 @@ def interpret(thread, allthreads, running, settings):
 
     jobtype = factory.jobtype_factory(settings.job_type)
 
-    jobtype.analysis(self, settings)    # analyze just-completed simulation
-    termination = jobtype.algorithm(self, settings)   # query algorithm to decide next move
+    jobtype.analyze(thread, settings)    # analyze just-completed simulation
+    termination = jobtype.algorithm(thread, settings)   # query algorithm to decide next move
 
     # Dump restart.pkl with updates from analysis and algorithm
     pickle.dump(allthreads, open('restart.pkl.bak', 'wb'))  # if the code crashes while dumping it could delete the contents of the pkl file

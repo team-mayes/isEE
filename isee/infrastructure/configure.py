@@ -63,18 +63,22 @@ def configure(input_file, user_working_directory=''):
 
         # Settings for isEE jobtype
         degeneracy: int = 0
-        initial_coordinates: list = ['']
+        initial_coordinates: typing.List[str] = ['']
+        ts_bonds: typing.Tuple[typing.List[str], typing.List[str], typing.List[float], typing.List[float]] = [[''],[''],[-1],[-1]]
 
         # For algorithm = 'script'
-        mutation_script: list
+        mutation_script: typing.List[str] = ['']
 
         # For algorithm = 'covariance_saturation'
-        covariance_reference_resid: int
+        covariance_reference_resid: int = -1
 
         # Linear Interaction Energy parameters
         ts_mask: str = ''
         lie_alpha: float = 0.18
         lie_beta: float = 0.33
+
+        # Custom Amber force fields, if required
+        paths_to_forcefields: typing.List[str] = ['']
 
         # Not expected to be set by user
         DEBUG: bool = False     # True causes some functions to return dummy values for testing purposes

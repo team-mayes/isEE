@@ -320,7 +320,7 @@ class isEE(JobType):
 
     def gatekeeper(self, settings):
         # if job for this thread has status 'C'ompleted/'C'anceled...
-        if self.get_status(job_index, settings) == 'C':
+        if self.get_status(0, settings) == 'C':     # index 0 because there is only ever one element in self.jobids
             return True
         else:
             return False

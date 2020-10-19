@@ -3,6 +3,7 @@ Factory script for obtaining the desired interfaces from the various interface s
 """
 
 from isee import jobtype
+from isee import algorithm
 from isee.infrastructure import mdengine
 from isee.infrastructure import batchsystem
 from isee.infrastructure import taskmanager
@@ -121,8 +122,8 @@ def algorithm_factory(algorithm_toolkit):
 
     """
 
-    algorithm_toolkits = {'script': taskmanager.Script,
-                          'covariance_saturation': taskmanager.CovarianceSaturation}
+    algorithm_toolkits = {'script': algorithm.Script,
+                          'covariance_saturation': algorithm.CovarianceSaturation}
 
     if algorithm_toolkit not in algorithm_toolkits.keys():
         raise ValueError('unsupported Algorithm name: ' + algorithm_toolkit)
