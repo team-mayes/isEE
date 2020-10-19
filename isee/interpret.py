@@ -3,6 +3,8 @@ This portion of the program is responsible for handling update of the results, c
 implementing the calls to JobType methods to control the value of the thread.coordinates attribute for the next step.
 """
 
+import os
+import shutil
 import pickle
 from isee.infrastructure import factory
 

@@ -272,7 +272,7 @@ def mutate(coords, topology, mutation, settings):
     system.template_lines = [
         'source leaprc.protein.ff14SB',
         'source leaprc.water.tip3p'] + \
-        ['source ' + item for item in settings.paths_to_forcefields] + \
+        ['source ' + item + '\n' for item in settings.paths_to_forcefields if item] + \
         ['loadOff atomic_ions.lib',
         'mut = loadpdb mutated.pdb',
         'nonprot = loadmol2 nonprot.mol2',
