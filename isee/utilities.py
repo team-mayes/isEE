@@ -6,6 +6,7 @@ are defined separately for cleanliness and legibility.
 import sys
 import math
 import pytraj
+import mdtraj
 import numpy
 import re
 import argparse
@@ -112,7 +113,7 @@ def lie(trajectory, topology, settings):
     return settings.lie_alpha * numpy.mean(VDW) + settings.lie_beta * numpy.mean(EEL)
 
 
-def mutate(coords, topology, mutation, settings):
+def mutate(coords, topology, mutation, name, settings):
     """
     Apply the specified mutation to the structure given by coords and topology and return the names of the new coord
     and topology files.
@@ -132,15 +133,17 @@ def mutate(coords, topology, mutation, settings):
         Path to the topology file corresponding to coords
     mutation : str
         Mutation to apply, given as "<resid><three-letter code>". For example, "70ASP" mutates residue 70 to aspartate
+    name : str
+        String to prepend to all filenames produced by this method
     settings : argparse.Namespace
         Settings namespace object
 
     Returns
     -------
     new_coords : str
-        Path to the newly created, mutated coordinate file
+        Path to the newly created, mutated coordinate file, named as name + '_min.rst7'
     new_topology : str
-        Path to the newly created, mutated topology file corresponding to new_coords
+        Path to the newly created, mutated topology file corresponding to new_coords, named as name + '.prmtop'
 
     """
 
@@ -168,19 +171,19 @@ def mutate(coords, topology, mutation, settings):
     protein_resnames = ':ARG,HIS,HID,HIE,HIP,LYS,ASP,ASH,GLU,GLH,SER,THR,ASN,GLN,CYS,GLY,PRO,ALA,VAL,ILE,LEU,MET,PHE,TYR,TRP,CYX,HYP'   # todo: is this exhaustive? Is there a better way to do this?
     traj = pytraj.load(coords, topology)
     traj.strip(protein_resnames)
-    pytraj.write_traj('nonprot.mol2', traj, overwrite=True)
+    pytraj.write_traj(name + '_nonprot.mol2', traj, overwrite=True)
 
     ### Remove all bond terms between atoms with non-standard bonds
     # Going FULL KLUDGE on this because it's starting to look like doing it "right" is extremely involved.
-    open('nonprot_mod.mol2', 'w').close()
-    with open('nonprot_mod.mol2', 'a') as f:
+    open(name + '_nonprot_mod.mol2', 'w').close()
+    with open(name + '_nonprot_mod.mol2', 'a') as f:
         atoms_yet = False
         bonds_yet = False
         substructure_yet = False
         index_name_list = []
         removed_lines = 0
         bond_count = 0
-        for line in open('nonprot.mol2', 'r').readlines():
+        for line in open(name + '_nonprot.mol2', 'r').readlines():
             if '@<TRIPOS>ATOM' in line:
                 atoms_yet = True
                 newline = line
@@ -219,6 +222,7 @@ def mutate(coords, topology, mutation, settings):
                     f.write(newline)
                     continue
                 if all([':***@' + index_name_list[1][index_name_list[0].index(atom)] in settings.ts_bonds[0] + settings.ts_bonds[1] for atom in atoms]):    # todo: can this be generalized?
+                    print(line)
                     removed_lines += 1
                     continue
                 else:
@@ -226,10 +230,10 @@ def mutate(coords, topology, mutation, settings):
                     newline = line.replace(line.split()[0], str(bond_count), 1)
                     f.write(newline)
                     continue
-    open('nonprot_mod_2.mol2', 'w').close()
-    with open('nonprot_mod_2.mol2', 'a') as f2:
+    open(name + '_nonprot_mod_2.mol2', 'w').close()
+    with open(name + '_nonprot_mod_2.mol2', 'a') as f2:
         count = 0
-        for line in open('nonprot_mod.mol2', 'r').readlines():
+        for line in open(name + '_nonprot_mod.mol2', 'r').readlines():
             if count == 2:
                 numbers = line.split()
                 newline = line.replace(numbers[1], str(int(numbers[1]) - removed_lines))
@@ -238,19 +242,19 @@ def mutate(coords, topology, mutation, settings):
                 f2.write(line)
             count += 1
 
-    os.remove('nonprot_mod.mol2')
-    os.remove('nonprot.mol2')
-    os.rename('nonprot_mod_2.mol2', 'nonprot.mol2')
+    os.remove(name + '_nonprot_mod.mol2')
+    os.remove(name + '_nonprot.mol2')
+    os.rename(name + '_nonprot_mod_2.mol2', name + '_nonprot.mol2')
 
     ### Cast remainder to separate .pdb
     traj = pytraj.load(coords, topology)
     traj.strip('!(' + protein_resnames + ')')
-    pytraj.write_traj('prot.pdb', traj, overwrite=True)
+    pytraj.write_traj(name + '_prot.pdb', traj, overwrite=True)
 
     ### Mutate  # todo: consider implementing multiple simultaneous mutations by looping this block
     pattern = re.compile('\s+[A-Z0-9]+\s+[A-Z]{3}\s+' + mutation[:-3])
-    with open('mutated.pdb','w') as f:
-        for line in open('prot.pdb', 'r').readlines():
+    with open(name + '_mutated.pdb','w') as f:
+        for line in open(name + '_prot.pdb', 'r').readlines():
             if not pattern.findall(line) == []:
                 if pattern.findall(line)[0].split()[0] in ['C','N','O','CA']:
                     newline = line.replace(pattern.findall(line)[0].split()[1], mutation[-3:].upper())
@@ -260,7 +264,6 @@ def mutate(coords, topology, mutation, settings):
                 newline = line
             f.write(newline)
 
-    new_name = 'mutant'     # todo: need a naming convention here
 
     ### Rebuild with tleap into .rst7 and .prmtop files
     # todo: there's no way to use tleap to do this without being forced into using Amber (or CHARMM?) force fields...
@@ -268,25 +271,25 @@ def mutate(coords, topology, mutation, settings):
     system = tleap.System()
     system.pbc_type = None  # turn off automatic solvation
     system.neutralize = False
-    system.output_prefix = new_name
+    system.output_prefix = name + '_tleap'
     system.template_lines = [
         'source leaprc.protein.ff14SB',
         'source leaprc.water.tip3p'] + \
         ['source ' + item + '\n' for item in settings.paths_to_forcefields if item] + \
         ['loadOff atomic_ions.lib',
-        'mut = loadpdb mutated.pdb',
-        'nonprot = loadmol2 nonprot.mol2',
+        'mut = loadpdb ' + name + '_mutated.pdb',
+        'nonprot = loadmol2 '  + name + '_nonprot.mol2',
         'model = combine { mut nonprot }',
         'set model box {' + box_dimensions + '}'
     ]
     with suppress_stderr():
         system.build()  # produces a ton of unwanted "WARNING" messages in stderr even when successful
 
-    mutated_rst = new_name + '.rst7'
-    mutated_top = new_name + '.prmtop'
+    mutated_rst = name + '_tleap.rst7'
+    mutated_top = name + '_tleap.prmtop'
 
     ### Add ts_bonds using parmed
-    parmed_top = parmed.load_file('mutant.prmtop')
+    parmed_top = parmed.load_file(mutated_top)
 
     ## KLUDGE KLUDGE KLUDGE ##
     # todo: kloooooj
@@ -316,16 +319,20 @@ def mutate(coords, topology, mutation, settings):
         simulation.context.setPeriodicBoxVectors(*openmm_rst.boxVectors)
 
     simulation.minimizeEnergy()
-    simulation.reporters.append(PDBReporter('min.pdb', 500, enforcePeriodicBox=False))
+    simulation.reporters.append(PDBReporter(name + '_min.pdb', 500, enforcePeriodicBox=False))
     simulation.reporters.append(StateDataReporter(sys.stdout, 500, step=True, potentialEnergy=True, temperature=True))
     simulation.step(5000)
 
     ### Return results
     # First, cast minimization output .pdb back to .rst7
-    traj = pytraj.load('min.pdb', mutated_top, frame_indices=[-1])
-    pytraj.write_traj(new_name + '_min.rst7', traj)
-    if os.path.exists(new_name + '_min.rst7.1'):
-        os.rename(new_name + '_min.rst7.1', new_name + '_min.rst7')
+    traj = mdtraj.load_frame(name + '_min.pdb', -1)
+    traj.save_amberrst7(name + '_min.rst7')
+
+    ## Deprecated code to do casting with pytraj; fails to carry over box information
+    # traj = pytraj.load('min.pdb', mutated_top, frame_indices=[-1])
+    # pytraj.write_traj(new_name + '_min.rst7', traj)
+    # if os.path.exists(new_name + '_min.rst7.1'):
+    #     os.rename(new_name + '_min.rst7.1', new_name + '_min.rst7')
 
     return new_name + '_min.rst7', mutated_top
 
@@ -360,11 +367,12 @@ def covariance_profile(thread, move_index, resid, settings):
 
 if __name__ == '__main__':
     ### This stuff is all for testing, shouldn't ever be called during an isEE run ###
-    settings = argparse.Namespace
+    settings = argparse.Namespace()
     settings.topology = 'TmAfc_D224G_t200.prmtop'
     settings.lie_alpha = 0.18
     settings.lie_beta = 0.33
     settings.ts_mask = ':442,443'
+    settings.paths_to_forcefields = ['171116_FPA_4NP-Xyl_ff.leaprc']
     # print(lie(['3_equil_5ns.nc', '3_equil_10ns.nc'], settings))
 
     # Residue1:AtomName1; Residue2:AtomName2; weight in kcal/mol-Å**2; equilibrium bond length in Å
@@ -374,4 +382,4 @@ if __name__ == '__main__':
                          [1.27,       1.23,       1.9,       2.4])
     coords = 'data/one_frame.rst7'
     topology = 'data/TmAfc_D224G_t200.prmtop'
-    mutate(coords, topology, '70ASP', settings)
+    mutate(coords, topology, '70ASP', 'test', settings)

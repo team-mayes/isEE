@@ -309,7 +309,7 @@ class isEE(JobType):
         base_index = 0  # for now we'll just use the original input structure
 
         # Perform desired mutation
-        new_inpcrd, new_top = utilities.mutate(self.history.inpcrd[base_index], self.history.tops[base_index], next_step, settings)
+        new_inpcrd, new_top = utilities.mutate(self.history.inpcrd[base_index], self.history.tops[base_index], next_step, self.history.inpcrd[base_index] + '_' + next_step, settings)
 
         # Update history and return
         self.history.inpcrd.append(new_inpcrd)
