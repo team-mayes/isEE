@@ -258,7 +258,7 @@ class isEE(JobType):
         return list_to_return
 
     def get_next_step(self, settings):
-        return 'prod'   # todo: consider cutting this method (only keeping it at the moment to contrast with minimization steps, but I might end up not keeping those output files around)
+        return 'prod_' + str(self.suffix)   # todo: consider cutting this method (only keeping it at the moment to contrast with minimization steps, but I might end up not keeping those output files around)
 
     def get_input_file(self, settings):
         return settings.path_to_input_files + '/' + settings.job_type + '_' + settings.md_engine + '.in'

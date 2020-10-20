@@ -222,7 +222,6 @@ def mutate(coords, topology, mutation, name, settings):
                     f.write(newline)
                     continue
                 if all([':***@' + index_name_list[1][index_name_list[0].index(atom)] in settings.ts_bonds[0] + settings.ts_bonds[1] for atom in atoms]):    # todo: can this be generalized?
-                    print(line)
                     removed_lines += 1
                     continue
                 else:
@@ -293,6 +292,7 @@ def mutate(coords, topology, mutation, name, settings):
 
     ## KLUDGE KLUDGE KLUDGE ##
     # todo: kloooooj
+    temp_ts_bonds = copy.copy(settings.ts_bonds)
     settings.ts_bonds = ([':260@OE2', ':443@O4',  ':443@O4', ':442@N1'],
                          [':443@H4O', ':443@H4O', ':442@C1', ':442@C1'],
                          [200,        200,        200,       200],
@@ -305,6 +305,8 @@ def mutate(coords, topology, mutation, name, settings):
         setbond = parmed.tools.actions.setBond(parmed_top, arg[0], arg[1], arg[2], arg[3])
         setbond.execute()
     parmed_top.save(mutated_top, overwrite=True)
+
+    settings.ts_bonds = temp_ts_bonds   # todo: k-k-k-kludge
 
     ### Minimize with OpenMM
     # First, cast .prmtop to OpenMM topology todo: replace Amber-specific stuff with call to method of MDEngine that returns an OpenMM Simulation object
@@ -334,7 +336,7 @@ def mutate(coords, topology, mutation, name, settings):
     # if os.path.exists(new_name + '_min.rst7.1'):
     #     os.rename(new_name + '_min.rst7.1', new_name + '_min.rst7')
 
-    return new_name + '_min.rst7', mutated_top
+    return name + '_min.rst7', mutated_top
 
 
 def covariance_profile(thread, move_index, resid, settings):
