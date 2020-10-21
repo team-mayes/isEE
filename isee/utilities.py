@@ -311,7 +311,7 @@ def mutate(coords, topology, mutation, name, settings):
     ### Minimize with OpenMM
     # First, cast .prmtop to OpenMM topology todo: replace Amber-specific stuff with call to method of MDEngine that returns an OpenMM Simulation object
     openmm_top = AmberPrmtopFile(mutated_top)
-    openmm_sys = openmm_top.createSystem(constraints=None, nonbondedMethod=PME, nonbondedCutoff=0.8*nanometer)
+    openmm_sys = openmm_top.createSystem(constraints=HBonds, nonbondedMethod=PME, nonbondedCutoff=0.8*nanometer)
     openmm_rst = AmberInpcrdFile(mutated_rst)
     integrator = LangevinIntegrator(300 * kelvin, 1 / picosecond, 0.002 * picoseconds)
     simulation = Simulation(openmm_top.topology, openmm_sys, integrator)
@@ -321,9 +321,9 @@ def mutate(coords, topology, mutation, name, settings):
         simulation.context.setPeriodicBoxVectors(*openmm_rst.boxVectors)
 
     simulation.minimizeEnergy()
-    simulation.reporters.append(PDBReporter(name + '_min.pdb', 500, enforcePeriodicBox=False))
-    simulation.reporters.append(StateDataReporter(sys.stdout, 500, step=True, potentialEnergy=True, temperature=True))
-    simulation.step(5000)
+    simulation.reporters.append(PDBReporter(name + '_min.pdb', 1000, enforcePeriodicBox=False))
+    simulation.reporters.append(StateDataReporter(sys.stdout, 1000, step=True, potentialEnergy=True, temperature=True))
+    simulation.step(10000)
 
     ### Return results
     # First, cast minimization output .pdb back to .rst7
@@ -339,10 +339,11 @@ def mutate(coords, topology, mutation, name, settings):
     return name + '_min.rst7', mutated_top
 
 
-def covariance_profile(thread, move_index, resid, settings):
+def covariance_profile(thread, move_index, settings):
     """
-    Calculate and return the covariance profile for the residue given by resid, in reference to the one given by
-    settings.covariance_reference_resid. The trajectory and topology are taken from the move_index'th step in thread.
+    Calculate and return the rmsd-of-covariance profile for the alpha carbons in a trajectory, in reference to the
+    covariance profile for the residue with index given by settings.covariance_reference_resid. The trajectory and
+    topology are taken from the move_index'th step in thread.
 
     Parameters
     ----------
@@ -350,21 +351,37 @@ def covariance_profile(thread, move_index, resid, settings):
         Thread on which to operate
     move_index : int
         Index of step within thread to operate on. Negative values are supported, to read from the end.
-    resid : int
-        resid of residue within the trajectory to calculate the profile for
     settings : argparse.Namespace
         Settings namespace object
 
     Returns
     -------
-    covariance_profile : list
-        List of covariance between resid and each other protein residue corresponding to the list index
+    rmsd_covariance_profile : list
+        List of RMSDs of covariances between the reference residue and each other protein residue corresponding to the
+        list index
 
     """
 
-    # todo: implement
+    traj = pytraj.iterload(thread.history.trajs[move_index], thread.history.tops[move_index])
+    covar_3d = pytraj.matrix.covar(traj, '@CA')     # covariance matrix of alpha carbons; 3Nx3N matrix for N alpha carbons
 
-    pass
+    # Now we need to average together x-, y-, and z-components to get overall covariance
+    N = len(covar_3d[0])
+    try:
+        assert mod(N/3, 1) == 0
+    except AssertionError:
+        raise RuntimeError('attempted to evaluate a covariance matrix, but the length of the sides of the square matrix'
+                           ' returned by pytraj.matrix.covar() is not divisible by three as expected. The length was: '
+                           + str(len(covar_3d[0])))
+    covar = [[numpy.mean(covar_3d[i:i+2,j:j+2]) for i in range(0, N, 3)] for j in range(0, N, 3)]
+
+    # Now, calculate the RMSD between each residue's covariance profile and that of the reference residue and return
+    ref_profile = covar[settings.covariance_reference_resid + 1]    # + 1 because resids are 1-indexed
+    rmsd_covariance_profile = [
+        numpy.sqrt(sum([(ref_profile[j] - covar[resid][j]) ** 2 for j in range(len(covar[resid]))]) / len(covar[resid]))
+        for resid in range(len(ref_profile))]
+
+    return rmsd_covariance_profile
 
 
 if __name__ == '__main__':
@@ -384,4 +401,8 @@ if __name__ == '__main__':
                          [1.27,       1.23,       1.9,       2.4])
     coords = 'data/one_frame.rst7'
     topology = 'data/TmAfc_D224G_t200.prmtop'
-    mutate(coords, topology, '70ASP', 'test', settings)
+
+    #mutate(coords, topology, '70ASP', 'test', settings)
+
+    thread = main.Thread()
+    thread.history.trajs = ['']

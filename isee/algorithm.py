@@ -7,6 +7,7 @@ import abc
 import subprocess
 import re
 import time
+from isee import utilities
 
 class Algorithm(abc.ABC):
     """
@@ -76,4 +77,24 @@ class CovarianceSaturation(Algorithm):
 
         if saturation:
             # Perform RMSD profile analysis
-            pass
+            rmsd_covar = utilities.covariance_profile(thread, -1, settings)     # -1: operate on most recent trajectory
+
+            # Pick minimum RMSD residue that hasn't already been done
+            already_done = set([item[:-3] for item in thread.history.muts] + [settings.covariance_reference_resid])
+            paired = [[i + 1, value] for value in rmsd_covar]   # paired resid, rmsd-of-covariance
+            paired = sorted(paired, key=lambda x: x[1])         # sorted by ascending rmsd
+            resid = settings.covariance_reference_resid
+            this_index = 0
+            while resid in already_done:    # iterate through paired in order of ascending rmsd until resid is unused
+                resid = paired[this_index][0]
+                this_index += 1
+                if this_index >= len(paired):    # if there are no more residues to mutate
+                    return 'TER'
+
+            return all_resnames[0] + str(int(resid))
+        else:   # unsaturated, so pick an unused mutation on the same residue as the previous mutation
+            # First, we need to generate a list of all the mutations that haven't been tried yet on this residue
+            done = [item[-3:] for item in thread.history.muts if item[:-3] == thread.history.muts[-1][:-3]]
+            todo = [item for item in all_resnames if not item in done]
+
+            return todo[0] + thread.history.muts[-1][:-3]
