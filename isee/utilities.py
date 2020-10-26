@@ -368,7 +368,7 @@ def covariance_profile(thread, move_index, settings):
     # Now we need to average together x-, y-, and z-components to get overall covariance
     N = len(covar_3d[0])
     try:
-        assert mod(N/3, 1) == 0
+        assert N/3 % 1 == 0
     except AssertionError:
         raise RuntimeError('attempted to evaluate a covariance matrix, but the length of the sides of the square matrix'
                            ' returned by pytraj.matrix.covar() is not divisible by three as expected. The length was: '

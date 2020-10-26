@@ -4,6 +4,7 @@ Algorithm and implements its abstract methods.
 """
 
 import abc
+import mdtraj
 import subprocess
 import re
 import time
@@ -69,9 +70,16 @@ class CovarianceSaturation(Algorithm):
 
         if thread.history.muts == []:   # first ever mutation
             saturation = True   # saturation = True means: pick a new residue to mutate
-        elif set([item[-3:] for item in thread.history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames))\
+
+        # Otherwise, saturation is defined by having tried all the residues in all_resnames (excluding the wild type)
+        # elif (the last (len(all_resnames) - 1) mutation resnames are all unique) and\
+        #   (all of the last (len(all_resnames) - 1) mutation resnames are in all_resnames) and\
+        #   (all of the last (len(all_resnames) - 1) mutation resids are equal to the last resid):
+        elif len(set([item[-3:] for item in thread.history.muts[-1 * (len(all_resnames) - 1):]])) == (len(all_resnames) - 1) and\
+                set([item[-3:] for item in thread.history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames))\
                 and all([item[:-3] == thread.history.muts[-1][:-3] for item in thread.history.muts[-1 * (len(all_resnames) - 1):]]):
             saturation = True
+
         else:
             saturation = False
 
@@ -80,8 +88,12 @@ class CovarianceSaturation(Algorithm):
             rmsd_covar = utilities.covariance_profile(thread, -1, settings)     # -1: operate on most recent trajectory
 
             # Pick minimum RMSD residue that hasn't already been done
-            already_done = set([item[:-3] for item in thread.history.muts] + [settings.covariance_reference_resid])
-            paired = [[i + 1, value] for value in rmsd_covar]   # paired resid, rmsd-of-covariance
+            already_done = set([int(item[:-3]) for item in thread.history.muts] + [settings.covariance_reference_resid])
+            paired = []
+            i = 0
+            for value in rmsd_covar:
+                i += 1
+                paired.append([i, value])       # paired resid, rmsd-of-covariance
             paired = sorted(paired, key=lambda x: x[1])         # sorted by ascending rmsd
             resid = settings.covariance_reference_resid
             this_index = 0
@@ -91,10 +103,16 @@ class CovarianceSaturation(Algorithm):
                 if this_index >= len(paired):    # if there are no more residues to mutate
                     return 'TER'
 
-            return all_resnames[0] + str(int(resid))
+            return str(int(resid)) + all_resnames[0]
         else:   # unsaturated, so pick an unused mutation on the same residue as the previous mutation
             # First, we need to generate a list of all the mutations that haven't been tried yet on this residue
             done = [item[-3:] for item in thread.history.muts if item[:-3] == thread.history.muts[-1][:-3]]
             todo = [item for item in all_resnames if not item in done]
 
-            return todo[0] + thread.history.muts[-1][:-3]
+            # Then, remove the wild type residue name from the list
+            mtop = mdtraj.load_prmtop(thread.history.tops[0])   # 0th topology corresponds to the "wild type" here
+            wt = mtop.residue(int(thread.history.muts[-1][:-3]) - 1)  # mdtraj topology is zero-indexed, so -1
+            if str(wt)[:3] in todo:
+                todo.remove(str(wt)[:3])   # wt is formatted as <three letter code><zero-indexed resid>
+
+            return thread.history.muts[-1][:-3] + todo[0]
