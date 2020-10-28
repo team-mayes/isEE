@@ -138,6 +138,10 @@ def init_threads(settings):
 
         thread.name = file
 
+        # todo: should the inpcrd and tops history saves above be replaced by saves to separate attributes (that is, not
+        # todo: within the history attribute) to accommodate the fact that not all threads will actually do simulations
+        # todo: using these files?
+
         allthreads.append(thread)
 
     return allthreads
@@ -171,7 +175,7 @@ def handle_loop_exception(running, settings):
             print('\nEncountered exception while attempting to cancel a job: ' + str(little_e) +
                   '\nIgnoring and continuing...')
 
-    raise RuntimeError('Job cancellation complete, ATESA is now shutting down.')
+    return 'Job cancellation complete, ATESA is now shutting down.'
 
 
 def main(settings, rescue_running=[]):
@@ -229,6 +233,8 @@ def main(settings, rescue_running=[]):
     # Initialize threads with first process step
     try:
         for thread in allthreads:
+            if not thread.history.trajs:    # if there have been no steps in this thread yet
+                jobtype.algorithm(thread, allthreads, settings)
             running = thread.process(running, settings)
     except Exception as e:
         if settings.restart:
@@ -255,7 +261,7 @@ def main(settings, rescue_running=[]):
 
     except Exception as e:  # catch arbitrary exceptions in the main loop so we can cancel jobs
         print(str(e))
-        handle_loop_exception(running, settings)
+        return handle_loop_exception(running, settings)
 
     if termination_criterion:
         return 'isEE run exiting normally (global termination criterion met)'

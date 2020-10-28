@@ -70,6 +70,37 @@ class Algorithm(abc.ABC):
     """
 
     @abc.abstractmethod
+    def get_first_step(self, thread, allthreads, settings):
+        """
+        Determine the first step for a thread. This method should be called before the first 'process' step after a new
+        thread is created (as defined by having an empty thread.history.trajs attribute) to allow the algorithm to
+        decide what its first step should be.
+
+        Specifically, implementations of this method should either pass on all threads after the first one directly to
+        get_next_step (for algorithms where the next step can be determined without information from the first one), or
+        else idle each thread after the first one.
+
+        Parameters
+        ----------
+        thread : Thread()
+            Thread object to consider
+        allthreads : list
+            List of all thread object to consider
+        settings : argparse.Namespace
+            Settings namespace object
+
+        Returns
+        -------
+        first_step : str
+            Next mutation to apply to the system, formatted as <resid><three-letter-code>; alternatively, 'TER' if
+            terminating or 'IDLE' if doing nothing. Finally, can also return 'WT' to indicate that the simulation should
+            proceed with the structure passed directly to isEE, without mutation.
+
+        """
+
+        pass
+
+    @abc.abstractmethod
     def get_next_step(self, thread, settings):
         """
         Determine the next step for the thread, or return 'TER' if there is none or 'IDLE' if information from other
@@ -105,7 +136,7 @@ class Algorithm(abc.ABC):
 
         """
 
-        def dump_and_return(to_return):
+        def dump_and_return(to_return, algorithm_history):
             # Helper function to dump pickle before returning
             pickle.dump(algorithm_history, open('algorithm_history.pkl.bak', 'wb'))
             if not os.path.getsize('algorithm_history.pkl.bak') == 0:
@@ -122,6 +153,27 @@ class Algorithm(abc.ABC):
 
         return algorithm_history, dump_and_return
 
+    @abc.abstractmethod
+    def reevaluate_idle(self, thread):
+        """
+        Determine if the given idle thread is ready to be passed along to the next step or should remain idle. The
+        result from this method can be used as a stand-in for the results of a jobtype.gatekeeper implementation when
+        called on an idle thread.
+
+        Parameters
+        ----------
+        thread : Thread()
+            Thread object to consider
+
+        Returns
+        -------
+        gatekeeper : bool
+            If True, then the thread is ready for the next "interpret" step. If False, then it should remain idle.
+
+        """
+
+        pass
+
 
 class Script(Algorithm):
     """
@@ -132,17 +184,26 @@ class Script(Algorithm):
 
     """
 
-    def get_next_step(self, thread, settings):
+    def get_first_step(self, thread, allthreads, settings):
+        # if this is the first thread in allthreads and there are no history.trajs objects in any threads yet
+        if thread == allthreads[0] and not any([bool(item.history.trajs) for item in allthreads]):
+            return 'WT'
+        else:
+            return get_next_step(thread, settings)
 
+    def get_next_step(self, thread, settings):
         algorithm_history, dump_and_return = super(Script, self).get_next_step(thread, settings)
 
         untried = [item for item in settings.mutation_script if not item in algorithm_history.muts]
         try:
             algorithm_history.muts.append(untried[0])
             buffer_history(algorithm_history)
-            return dump_and_return(untried[0])   # first untried mutation
+            return dump_and_return(untried[0], algorithm_history)   # first untried mutation
         except IndexError:  # no untried mutation remains
-            return dump_and_return('TER')
+            return dump_and_return('TER', algorithm_history)
+
+    def reevaluate_idle(self, thread):
+        return True    # this algorithm never returns 'IDLE', so it's always ready for the next step
 
 
 class CovarianceSaturation(Algorithm):
@@ -154,15 +215,15 @@ class CovarianceSaturation(Algorithm):
 
     """
 
+    def get_first_step(self, thread, allthreads, settings):
+        # if this is the first thread in allthreads and there are no history.trajs objects in any threads yet
+        if thread == allthreads[0] and not any([bool(item.history.trajs) for item in allthreads]):
+            return 'WT'
+        else:
+            return 'IDLE'   # need to wait for first simulation to finish before proceeding
+
     def get_next_step(self, thread, settings):
-
-        def dump_and_return(to_return):
-            # Helper function to dump pickle before returning
-            pickle.dump(algorithm_history, open('algorithm_history.pkl.bak', 'wb'))
-            if not os.path.getsize('algorithm_history.pkl.bak') == 0:
-                shutil.copy('algorithm_history.pkl.bak', 'algorithm_history.pkl')  # copying after is safer
-
-            return to_return
+        algorithm_history, dump_and_return = super(CovarianceSaturation, self).get_next_step(thread, settings)
 
         ### Load algorithm_history from algorithm_history.pkl ###
         if os.path.exists('algorithm_history.pkl'):
@@ -206,9 +267,13 @@ class CovarianceSaturation(Algorithm):
                 resid = paired[this_index][0]
                 this_index += 1
                 if this_index >= len(paired):    # if there are no more residues to mutate
-                    return 'TER'
+                    return dump_and_return('TER', algorithm_history)
 
-            return str(int(resid)) + all_resnames[0]
+            next_mut = str(int(resid)) + all_resnames[0]
+
+            algorithm_history.muts.append(next_mut)
+            buffer_history(algorithm_history)
+            return dump_and_return(next_mut, algorithm_history)
         else:   # unsaturated, so pick an unused mutation on the same residue as the previous mutation
             # First, we need to generate a list of all the mutations that haven't been tried yet on this residue
             done = [item[-3:] for item in thread.history.muts if item[:-3] == thread.history.muts[-1][:-3]]
@@ -220,7 +285,23 @@ class CovarianceSaturation(Algorithm):
             if str(wt)[:3] in todo:
                 todo.remove(str(wt)[:3])   # wt is formatted as <three letter code><zero-indexed resid>
 
-            return thread.history.muts[-1][:-3] + todo[0]
+            next_mut = thread.history.muts[-1][:-3] + todo[0]
+
+            algorithm_history.muts.append(next_mut)
+            buffer_history(algorithm_history)
+            return dump_and_return(next_mut, algorithm_history)
+
+    def reevaluate_idle(self, thread):
+        # The condition to meet for this algorithm to allow an idle thread to resume is simply that the simulation for
+        # the first system (non-mutated) is finished and has had get_next_step called on it
+        if os.path.exists('algorithm_history.pkl'):
+            algorithm_history = pickle.load(open('algorithm_history.pkl', 'rb'))
+            if algorithm_history.muts:
+                return True
+            else:
+                return False
+        else:
+            return False
 
 
 class SubnetworkHotspots(Algorithm):
@@ -231,7 +312,13 @@ class SubnetworkHotspots(Algorithm):
 
     """
 
+    def get_first_step(self, thread, allthreads, settings):
+        pass
+
     def get_next_step(self, thread, settings):
+        pass
+
+    def reevaluate_idle(self, thread):
         pass
 
 

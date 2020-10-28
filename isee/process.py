@@ -32,6 +32,8 @@ def process(thread, running, settings):
 
     # First, check if the previous call to jobtype.algorithm flagged an 'IDLE' step, and if so, skip processing
     if thread.idle:
+        if thread not in running:   # idle threads are still running
+            running.append(thread)
         return running
 
     # Determine next step and, if appropriate, build corresponding list of batch files

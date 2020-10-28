@@ -192,7 +192,7 @@ class JobType(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def algorithm(self, settings):
+    def algorithm(self, allthreads, settings):
         """
         Implement the algorithm that determines the next step and sets up the appropriate self.history attributes
 
@@ -200,6 +200,8 @@ class JobType(abc.ABC):
         ----------
         self : Thread
             Methods in the JobType abstract base class are intended to be invoked by Thread objects
+        allthreads : list
+            A list of all of the thread objects to consider during the algorithm.
         settings : argparse.Namespace
             Settings namespace object
 
@@ -307,16 +309,23 @@ class isEE(JobType):
     def analyze(self, settings):
         self.history.score.append(utilities.lie(self.history.trajs[-1], self.history.tops[-1], settings))
 
-    def algorithm(self, settings):
+    def algorithm(self, allthreads, settings):
         # Get next mutation to apply from the desired algorithm, or else terminate
         this_algorithm = factory.algorithm_factory(settings.algorithm)
-        next_step = this_algorithm.get_next_step(None, self, settings)
+
+        if not self.history.trajs:  # if this is the first step in this thread
+            next_step = this_algorithm.get_first_step(None, self, allthreads, settings)
+        else:
+            next_step = this_algorithm.get_next_step(None, self, settings)
+
+        if next_step == 'WT':   # do nothing, correct structure is already set in history.tops and history.inpcrd
+            return False        # False: do not terminate
 
         if next_step == 'IDLE':
             self.idle = True
-            return False    # False: do not terminate
+            return False        # False: do not terminate
 
-        self.idle = False   # explicitly reset idle to False whenever we get to this step
+        self.idle = False       # explicitly reset idle to False whenever we get to this step
 
         if next_step == 'TER':  # algorithm says global termination     # todo: this should be thread termination, right? Global termination should be determined by some higher level process called in the main loop in main.py, I think.
             return True
@@ -338,6 +347,11 @@ class isEE(JobType):
         return False    # False: do not terminate
 
     def gatekeeper(self, settings):
+        # first, check whether this thread is intentionally idling and if so, let the algorithm guide us
+        if self.idle:
+            this_algorithm = factory.algorithm_factory(settings.algorithm)
+            return this_algorithm.reevaluate_idle(None, self)
+
         # if job for this thread has status 'C'ompleted/'C'anceled...
         if self.get_status(0, settings) == 'C':     # index 0 because there is only ever one element in self.jobids
             return True

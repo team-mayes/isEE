@@ -36,7 +36,7 @@ def interpret(thread, allthreads, running, settings):
     if not thread.idle:     # only analyze if there's something to analyze, i.e., last step was not idle
         jobtype.analyze(thread, settings)    # analyze just-completed simulation
 
-    termination = jobtype.algorithm(thread, settings)   # query algorithm to decide next move
+    termination = jobtype.algorithm(thread, allthreads, settings)   # query algorithm to decide next move
 
     # Dump restart.pkl with updates from analysis and algorithm
     pickle.dump(allthreads, open('restart.pkl.bak', 'wb'))  # if the code crashes while dumping it could delete the contents of the pkl file
