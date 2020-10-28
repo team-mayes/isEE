@@ -3,12 +3,63 @@ Interface for Algorithm objects. New Algorithms can be implemented by constructi
 Algorithm and implements its abstract methods.
 """
 
-import abc
-import mdtraj
-import subprocess
+import os
 import re
+import abc
 import time
+import shutil
+import pickle
+import mdtraj
+import argparse
+import subprocess
+from isee.infrastructure import factory
 from isee import utilities
+
+def buffer_history(algorithm_history):
+    """
+    Add properly typed placeholder entries to the end of each attribute of algorithm_history in order to keep each
+    attribute of the same length.
+
+    All attributes of a properly formatted algorithm_history object are lists, where a given index across any such list
+    contains corresponding information. This function simply appends blank placeholder entries to lists that are too
+    short, to facilitate cleanly maintaining this feature even when not every list in the object is ready to be updated.
+
+    If the type is not recognized, None is used instead. None is also used where the list contains ints, floats, or
+    bools, as using zero or False in this case is more likely to be accidentally misinterpreted as data instead of as
+    the absence thereof, as intended.
+
+    Parameters
+    ----------
+    algorithm_history : argparse.Namespace
+        The object on which to act
+
+    Returns
+    -------
+    None
+
+    """
+
+    # Identify the length of the longest list
+    max_len = max([len(item) for item in [algorithm_history.__getattribute__(att) for att in algorithm_history.__dict__.keys()]])
+
+    # Now append the appropriate placeholders where needed
+    for attribute in algorithm_history.__dict__.keys():
+        try:
+            this_type = type(algorithm_history.__getattribute__(attribute)[0])   # type of 0th object in attribute
+        except IndexError:  # empty list, no types available
+            this_type = type(None)
+
+        to_append = None
+        # iterate through objects of various types that evaluate with bool() to False
+        # we exclude int, float, and bool examples because these should use None regardless
+        for potential_type in ['', None, [], (), {}]:
+            if this_type == type(potential_type):
+                to_append = potential_type
+                break
+
+        while len(algorithm_history.__getattribute__(attribute)) < max_len:
+            algorithm_history.__getattribute__(attribute).append(to_append)
+
 
 class Algorithm(abc.ABC):
     """
@@ -21,7 +72,23 @@ class Algorithm(abc.ABC):
     @abc.abstractmethod
     def get_next_step(self, thread, settings):
         """
-        Determine the next step for the thread, or return 'TER' if there is none.
+        Determine the next step for the thread, or return 'TER' if there is none or 'IDLE' if information from other
+        threads is required before the next step can be determined.
+
+        Implementations of this method should always begin by loading a global history object from
+        algorithm_history.pkl, which is a namespace object with the same attributes as a thread.history object, which
+        should have been created by JobType.update_history the first time it was called. They should then end by dumping
+        their copy of the algorithm history to that file. The purpose of this file is to keep track of the global
+        history of the algorithm so far in order to facilitate parallelization among multiple threads.
+
+        In general, whenever a new item is added to any of the lists in the algorithm history object, something should
+        also be added to the corresponding index of every other list, even if only a placeholder. If the new item is
+        being appended to the end of a list, then this requirement can be satisfied by calling buffer_history() on the
+        algorithm history object after appending the desired information.
+
+        In the case where necessary information for get_next_step is still being awaited from an assigned thread, this
+        function should return the string 'IDLE', to indicate that the thread should do nothing. The functions of 'IDLE'
+        and 'TER' are defined by process.process().
 
         Parameters
         ----------
@@ -34,11 +101,26 @@ class Algorithm(abc.ABC):
         -------
         next_step : str
             Next mutation to apply to the system, formatted as <resid><three-letter-code>; alternatively, 'TER' if
-            terminating
+            terminating or 'IDLE' if doing nothing.
 
         """
 
-        pass
+        def dump_and_return(to_return):
+            # Helper function to dump pickle before returning
+            pickle.dump(algorithm_history, open('algorithm_history.pkl.bak', 'wb'))
+            if not os.path.getsize('algorithm_history.pkl.bak') == 0:
+                shutil.copy('algorithm_history.pkl.bak', 'algorithm_history.pkl')  # copying after is safer
+
+            return to_return
+
+        ### Load algorithm_history from algorithm_history.pkl ###
+        if os.path.exists('algorithm_history.pkl'):
+            algorithm_history = pickle.load(open('algorithm_history.pkl', 'rb'))
+        else:
+            raise FileNotFoundError('algorithm_history.pkl not found; it should have been created when the first '
+                                    'thread was initialized. Did you do something unusual?')
+
+        return algorithm_history, dump_and_return
 
 
 class Script(Algorithm):
@@ -46,14 +128,21 @@ class Script(Algorithm):
     Adapter class for the "algorithm" that is simply following the "script" of mutations prescribed by the user in the
     settings.mutation_script list.
 
+    This particular implementation of Algorithm has no conditions that return 'IDLE'.
+
     """
 
     def get_next_step(self, thread, settings):
-        untried = [item for item in settings.mutation_script if not item in thread.history.muts]
+
+        algorithm_history, dump_and_return = super(Script, self).get_next_step(thread, settings)
+
+        untried = [item for item in settings.mutation_script if not item in algorithm_history.muts]
         try:
-            return untried[0]   # first untried mutation
+            algorithm_history.muts.append(untried[0])
+            buffer_history(algorithm_history)
+            return dump_and_return(untried[0])   # first untried mutation
         except IndexError:  # no untried mutation remains
-            return 'TER'
+            return dump_and_return('TER')
 
 
 class CovarianceSaturation(Algorithm):
@@ -66,6 +155,22 @@ class CovarianceSaturation(Algorithm):
     """
 
     def get_next_step(self, thread, settings):
+
+        def dump_and_return(to_return):
+            # Helper function to dump pickle before returning
+            pickle.dump(algorithm_history, open('algorithm_history.pkl.bak', 'wb'))
+            if not os.path.getsize('algorithm_history.pkl.bak') == 0:
+                shutil.copy('algorithm_history.pkl.bak', 'algorithm_history.pkl')  # copying after is safer
+
+            return to_return
+
+        ### Load algorithm_history from algorithm_history.pkl ###
+        if os.path.exists('algorithm_history.pkl'):
+            algorithm_history = pickle.load(open('algorithm_history.pkl', 'rb'))
+        else:
+            raise FileNotFoundError('algorithm_history.pkl not found; it should have been created when the first '
+                                    'thread was initialized. Did you do something unusual?')
+
         all_resnames = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA', 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP']
 
         if thread.history.muts == []:   # first ever mutation
@@ -116,3 +221,27 @@ class CovarianceSaturation(Algorithm):
                 todo.remove(str(wt)[:3])   # wt is formatted as <three letter code><zero-indexed resid>
 
             return thread.history.muts[-1][:-3] + todo[0]
+
+
+class SubnetworkHotspots(Algorithm):
+    """
+    Adapter class for algorithm that finds subnetworks within the protein structure (as defined by ___) and then uses
+    the same method as the CovarianceSaturation algorithm to identify hotspots within subnetworks and perform saturation
+    mutagenesis on them. After saturation within each
+
+    """
+
+    def get_next_step(self, thread, settings):
+        pass
+
+
+if __name__ == '__main__':
+    test = Script()
+    thread = argparse.Namespace()
+    settings = argparse.Namespace()
+    settings.mutation_script = ['64ASN']
+    settings.algorithm = 'script'
+    jobtype = factory.jobtype_factory('isee')
+    jobtype.update_history(thread, settings, **{'initialize': True})
+    next = test.get_next_step(thread, settings)
+    print(next)

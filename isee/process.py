@@ -30,7 +30,11 @@ def process(thread, running, settings):
 
     """
 
-    ### Determine next step and, if appropriate, build corresponding list of batch files ###
+    # First, check if the previous call to jobtype.algorithm flagged an 'IDLE' step, and if so, skip processing
+    if thread.idle:
+        return running
+
+    # Determine next step and, if appropriate, build corresponding list of batch files
     if not thread.skip_update:
         thread.current_name = thread.get_next_step(settings)
     else:

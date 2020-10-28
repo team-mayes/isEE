@@ -149,6 +149,11 @@ class JobType(abc.ABC):
         history namespace and returns it. Otherwise, it adds the values of the desired keywords (which are desired
         depends on the implementation) to the corresponding history attributes in the index given by thread.suffix.
 
+        Implementations of update_history should always save a copy of a freshly initialized thread.history object in a
+        pickle file named 'algorithm_history.pkl' if one does not already exist. This is to support parallelization of
+        algorithms across threads while still keeping the "shape" of the history object defined in one place (namely,
+        in the implementation of update_history.)
+
         Parameters
         ----------
         self : Thread
@@ -283,6 +288,8 @@ class isEE(JobType):
                 self.history.muts = []              # list of strings describing mutations tested; updated by algorithm
                 self.history.score = []             # list of scores; updated by analyze()
                 self.history.timestamps = []        # list of ints representing seconds since the epoch for the end of each step, updated by ?
+            if not os.path.exists('algorithm_history.pkl'):     # initialize algorithm_history file if necessary
+                pickle.dump(self.history, open('algorithm_history.pkl', 'wb'))  # an empty self.history template
             if 'inpcrd' in kwargs.keys():
                 self.history.inpcrd.append(kwargs['inpcrd'])
         else:   # self.history should already exist
@@ -301,8 +308,17 @@ class isEE(JobType):
         # Get next mutation to apply from the desired algorithm, or else terminate
         this_algorithm = factory.algorithm_factory(settings.algorithm)
         next_step = this_algorithm.get_next_step(None, self, settings)
+
+        if next_step == 'IDLE':
+            self.idle = True
+            return False    # False: do not terminate
+
+        self.idle = False   # explicitly reset idle to False whenever we get to this step
+
         if next_step == 'TER':  # algorithm says global termination     # todo: this should be thread termination, right? Global termination should be determined by some higher level process called in the main loop in main.py, I think.
             return True
+
+        # Else, we have a new mutant to direct the thread to build and simulate
         self.history.muts.append(next_step)
 
         # Get index of previous step to use as base for next step
@@ -316,7 +332,7 @@ class isEE(JobType):
         self.history.tops.append(new_top)
         self.suffix += 1
 
-        return False
+        return False    # False: do not terminate
 
     def gatekeeper(self, settings):
         # if job for this thread has status 'C'ompleted/'C'anceled...

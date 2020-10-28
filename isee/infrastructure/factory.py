@@ -123,7 +123,8 @@ def algorithm_factory(algorithm_toolkit):
     """
 
     algorithm_toolkits = {'script': algorithm.Script,
-                          'covariance_saturation': algorithm.CovarianceSaturation}
+                          'covariance_saturation': algorithm.CovarianceSaturation,
+                          'subnetwork_hotspots': algorithm.SubnetworkHotspots}
 
     if algorithm_toolkit not in algorithm_toolkits.keys():
         raise ValueError('unsupported Algorithm name: ' + algorithm_toolkit)

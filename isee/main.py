@@ -48,6 +48,7 @@ class Thread(object):
         self.accept_moves = 0           # running total of "accepted" "moves", as defined by JobType.update_results
         self.status = 'fresh thread'    # tag for current status of a thread
         self.skip_update = False        # used by restart to resubmit jobs as they were rather than doing the next step
+        self.idle = False               # flag for idle thread, to facilitate parallelization of algorithms
 
     def process(self, running, settings):
         return process.process(self, running, settings)

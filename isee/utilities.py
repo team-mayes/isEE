@@ -103,7 +103,7 @@ def lie(trajectory, topology, settings):
     VDW = []
     update_progress(0, 'LIE')
     i = 0
-    for frame in range(traj.n_frames):
+    for frame in range(traj.n_frames):  # todo: this can take a very long time. What is the appropriate spacing between frames?
         lie_temp = pytraj.energy_analysis.lie(traj, mask=settings.ts_mask, frame_indices=[frame])
         EEL = numpy.append(EEL, lie_temp['LIE[EELEC]'])
         VDW = numpy.append(VDW, lie_temp['LIE[EVDW]'])
@@ -321,9 +321,9 @@ def mutate(coords, topology, mutation, name, settings):
         simulation.context.setPeriodicBoxVectors(*openmm_rst.boxVectors)
 
     simulation.minimizeEnergy()
-    simulation.reporters.append(PDBReporter(name + '_min.pdb', 1000, enforcePeriodicBox=False))
-    simulation.reporters.append(StateDataReporter(sys.stdout, 1000, step=True, potentialEnergy=True, temperature=True))
-    simulation.step(10000)
+    simulation.reporters.append(PDBReporter(name + '_min.pdb', int(settings.min_steps/10), enforcePeriodicBox=False))
+    simulation.reporters.append(StateDataReporter(sys.stdout, int(settings.min_steps/10), step=True, potentialEnergy=True, temperature=True))
+    simulation.step(settings.min_steps)
 
     ### Return results
     # First, cast minimization output .pdb back to .rst7

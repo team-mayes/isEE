@@ -65,6 +65,7 @@ def configure(input_file, user_working_directory=''):
         degeneracy: int = 0
         initial_coordinates: typing.List[str] = ['']
         ts_bonds: typing.Tuple[typing.List[str], typing.List[str], typing.List[float], typing.List[float]] = [[''],[''],[-1],[-1]]
+        min_steps: int = 5000
 
         # For algorithm = 'script'
         mutation_script: typing.List[str] = ['']

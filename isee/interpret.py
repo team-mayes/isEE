@@ -33,7 +33,9 @@ def interpret(thread, allthreads, running, settings):
 
     jobtype = factory.jobtype_factory(settings.job_type)
 
-    jobtype.analyze(thread, settings)    # analyze just-completed simulation
+    if not thread.idle:     # only analyze if there's something to analyze, i.e., last step was not idle
+        jobtype.analyze(thread, settings)    # analyze just-completed simulation
+
     termination = jobtype.algorithm(thread, settings)   # query algorithm to decide next move
 
     # Dump restart.pkl with updates from analysis and algorithm
