@@ -229,6 +229,7 @@ def main(settings, rescue_running=[]):
 
     running = allthreads.copy()     # to be pruned later by thread.process()
     termination_criterion = False   # initialize global termination criterion boolean
+    jobtype = factory.jobtype_factory(settings.job_type)    # initialize jobtype
 
     # Initialize threads with first process step
     try:

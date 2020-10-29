@@ -69,6 +69,23 @@ class Algorithm(abc.ABC):
 
     """
 
+    def __init__(self):
+        ### Load algorithm_history from algorithm_history.pkl ###
+        if os.path.exists('algorithm_history.pkl'):
+            self.algorithm_history = pickle.load(open('algorithm_history.pkl', 'rb'))
+        else:
+            raise FileNotFoundError('algorithm_history.pkl not found; it should have been created when the first '
+                                    'thread was initialized. Did you do something unusual?')
+
+    @staticmethod
+    def dump_and_return(to_return, algorithm_history):
+        # Helper function to dump pickle before returning
+        pickle.dump(algorithm_history, open('algorithm_history.pkl.bak', 'wb'))
+        if not os.path.getsize('algorithm_history.pkl.bak') == 0:
+            shutil.copy('algorithm_history.pkl.bak', 'algorithm_history.pkl')  # copying after is safer
+
+        return to_return
+
     @abc.abstractmethod
     def get_first_step(self, thread, allthreads, settings):
         """
@@ -136,22 +153,7 @@ class Algorithm(abc.ABC):
 
         """
 
-        def dump_and_return(to_return, algorithm_history):
-            # Helper function to dump pickle before returning
-            pickle.dump(algorithm_history, open('algorithm_history.pkl.bak', 'wb'))
-            if not os.path.getsize('algorithm_history.pkl.bak') == 0:
-                shutil.copy('algorithm_history.pkl.bak', 'algorithm_history.pkl')  # copying after is safer
-
-            return to_return
-
-        ### Load algorithm_history from algorithm_history.pkl ###
-        if os.path.exists('algorithm_history.pkl'):
-            algorithm_history = pickle.load(open('algorithm_history.pkl', 'rb'))
-        else:
-            raise FileNotFoundError('algorithm_history.pkl not found; it should have been created when the first '
-                                    'thread was initialized. Did you do something unusual?')
-
-        return algorithm_history, dump_and_return
+        pass
 
     @abc.abstractmethod
     def reevaluate_idle(self, thread):
@@ -189,18 +191,16 @@ class Script(Algorithm):
         if thread == allthreads[0] and not any([bool(item.history.trajs) for item in allthreads]):
             return 'WT'
         else:
-            return get_next_step(thread, settings)
+            return Script.get_next_step(self, thread, settings) # does calling this here make this method the super?
 
     def get_next_step(self, thread, settings):
-        algorithm_history, dump_and_return = super(Script, self).get_next_step(thread, settings)
-
-        untried = [item for item in settings.mutation_script if not item in algorithm_history.muts]
+        untried = [item for item in settings.mutation_script if not item in self.algorithm_history.muts]
         try:
-            algorithm_history.muts.append(untried[0])
-            buffer_history(algorithm_history)
-            return dump_and_return(untried[0], algorithm_history)   # first untried mutation
+            self.algorithm_history.muts.append(untried[0])
+            buffer_history(self.algorithm_history)
+            return self.dump_and_return(untried[0], self.algorithm_history)   # first untried mutation
         except IndexError:  # no untried mutation remains
-            return dump_and_return('TER', algorithm_history)
+            return self.dump_and_return('TER', self.algorithm_history)
 
     def reevaluate_idle(self, thread):
         return True    # this algorithm never returns 'IDLE', so it's always ready for the next step
@@ -223,27 +223,18 @@ class CovarianceSaturation(Algorithm):
             return 'IDLE'   # need to wait for first simulation to finish before proceeding
 
     def get_next_step(self, thread, settings):
-        algorithm_history, dump_and_return = super(CovarianceSaturation, self).get_next_step(thread, settings)
-
-        ### Load algorithm_history from algorithm_history.pkl ###
-        if os.path.exists('algorithm_history.pkl'):
-            algorithm_history = pickle.load(open('algorithm_history.pkl', 'rb'))
-        else:
-            raise FileNotFoundError('algorithm_history.pkl not found; it should have been created when the first '
-                                    'thread was initialized. Did you do something unusual?')
-
         all_resnames = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA', 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP']
 
-        if thread.history.muts == []:   # first ever mutation
+        if self.algorithm_history.muts == []:   # first ever mutation
             saturation = True   # saturation = True means: pick a new residue to mutate
 
         # Otherwise, saturation is defined by having tried all the residues in all_resnames (excluding the wild type)
         # elif (the last (len(all_resnames) - 1) mutation resnames are all unique) and\
         #   (all of the last (len(all_resnames) - 1) mutation resnames are in all_resnames) and\
         #   (all of the last (len(all_resnames) - 1) mutation resids are equal to the last resid):
-        elif len(set([item[-3:] for item in thread.history.muts[-1 * (len(all_resnames) - 1):]])) == (len(all_resnames) - 1) and\
-                set([item[-3:] for item in thread.history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames))\
-                and all([item[:-3] == thread.history.muts[-1][:-3] for item in thread.history.muts[-1 * (len(all_resnames) - 1):]]):
+        elif len(set([item[-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]])) == (len(all_resnames) - 1) and\
+                set([item[-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames))\
+                and all([item[:-3] == self.algorithm_history.muts[-1][:-3] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]):
             saturation = True
 
         else:
@@ -254,7 +245,7 @@ class CovarianceSaturation(Algorithm):
             rmsd_covar = utilities.covariance_profile(thread, -1, settings)     # -1: operate on most recent trajectory
 
             # Pick minimum RMSD residue that hasn't already been done
-            already_done = set([int(item[:-3]) for item in thread.history.muts] + [settings.covariance_reference_resid])
+            already_done = set([int(item[:-3]) for item in self.algorithm_history.muts] + [settings.covariance_reference_resid])
             paired = []
             i = 0
             for value in rmsd_covar:
@@ -267,29 +258,29 @@ class CovarianceSaturation(Algorithm):
                 resid = paired[this_index][0]
                 this_index += 1
                 if this_index >= len(paired):    # if there are no more residues to mutate
-                    return dump_and_return('TER', algorithm_history)
+                    return self.dump_and_return('TER', self.algorithm_history)
 
             next_mut = str(int(resid)) + all_resnames[0]
 
             algorithm_history.muts.append(next_mut)
-            buffer_history(algorithm_history)
-            return dump_and_return(next_mut, algorithm_history)
+            buffer_history(self.algorithm_history)
+            return self.dump_and_return(next_mut, self.algorithm_history)
         else:   # unsaturated, so pick an unused mutation on the same residue as the previous mutation
             # First, we need to generate a list of all the mutations that haven't been tried yet on this residue
-            done = [item[-3:] for item in thread.history.muts if item[:-3] == thread.history.muts[-1][:-3]]
+            done = [item[-3:] for item in self.algorithm_history.muts if item[:-3] == self.algorithm_history.muts[-1][:-3]]
             todo = [item for item in all_resnames if not item in done]
 
             # Then, remove the wild type residue name from the list
             mtop = mdtraj.load_prmtop(thread.history.tops[0])   # 0th topology corresponds to the "wild type" here
-            wt = mtop.residue(int(thread.history.muts[-1][:-3]) - 1)  # mdtraj topology is zero-indexed, so -1
+            wt = mtop.residue(int(self.algorithm_history.muts[-1][:-3]) - 1)  # mdtraj topology is zero-indexed, so -1
             if str(wt)[:3] in todo:
                 todo.remove(str(wt)[:3])   # wt is formatted as <three letter code><zero-indexed resid>
 
-            next_mut = thread.history.muts[-1][:-3] + todo[0]
+            next_mut = self.algorithm_history.muts[-1][:-3] + todo[0]
 
             algorithm_history.muts.append(next_mut)
-            buffer_history(algorithm_history)
-            return dump_and_return(next_mut, algorithm_history)
+            buffer_history(self.algorithm_history)
+            return self.dump_and_return(next_mut, self.algorithm_history)
 
     def reevaluate_idle(self, thread):
         # The condition to meet for this algorithm to allow an idle thread to resume is simply that the simulation for
@@ -323,12 +314,13 @@ class SubnetworkHotspots(Algorithm):
 
 
 if __name__ == '__main__':
-    test = Script()
+    jobtype = factory.jobtype_factory('isee')
     thread = argparse.Namespace()
     settings = argparse.Namespace()
     settings.mutation_script = ['64ASN']
     settings.algorithm = 'script'
-    jobtype = factory.jobtype_factory('isee')
     jobtype.update_history(thread, settings, **{'initialize': True})
-    next = test.get_next_step(thread, settings)
+    thread.history.trajs = ['extant']
+    test = Script()
+    next = test.get_first_step(thread, [thread], settings)
     print(next)
