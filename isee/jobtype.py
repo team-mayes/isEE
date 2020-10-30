@@ -34,12 +34,10 @@ class JobType(abc.ABC):
     @abc.abstractmethod
     def get_initial_coordinates(self, settings):
         """
-        Obtain list of initial coordinate files and copy them to the working directory.
+        Obtain list of the appropriate initial coordinate files and copy them to the working directory.
 
         Parameters
         ----------
-        self : Thread
-            Methods in the JobType abstract base class are intended to be invoked by Thread objects
         settings : argparse.Namespace
             Settings namespace object
 
@@ -53,13 +51,13 @@ class JobType(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_next_step(self, settings):
+    def get_next_step(self, thread, settings):
         """
         Determine and return name for next step in the thread given by "self"
 
         Parameters
         ----------
-        self : Thread()
+        thread : Thread()
             The Thread object on which to act
         settings : argparse.Namespace
             Settings namespace object
@@ -74,7 +72,7 @@ class JobType(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_input_file(self, settings):
+    def get_input_file(self, thread, settings):
         """
         Obtain appropriate input file for next job.
 
@@ -83,8 +81,8 @@ class JobType(abc.ABC):
 
         Parameters
         ----------
-        self : Thread
-            Methods in the JobType abstract base class are intended to be invoked by Thread objects
+        thread : Thread
+            Methods in the JobType abstract base class are intended to operate on Thread objects
         settings : argparse.Namespace
             Settings namespace object
 
@@ -98,14 +96,14 @@ class JobType(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_batch_template(self, settings):
+    def get_batch_template(self, thread, settings):
         """
         Return name of batch template file for the type of job indicated.
 
         Parameters
         ----------
-        self : Thread
-            Methods in the JobType abstract base class are intended to be invoked by Thread objects
+        thread : Thread
+            Methods in the JobType abstract base class are intended to operate on Thread objects
         settings : argparse.Namespace
             Settings namespace object
 
@@ -119,14 +117,14 @@ class JobType(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_struct(self):
+    def get_struct(self, thread):
         """
         Return the name of the appropriate inpcrd and topology files for the next step in the thread given by self.
 
         Parameters
         ----------
-        self : Thread
-            Methods in the JobType abstract base class are intended to be invoked by Thread objects
+        thread : Thread
+            Methods in the JobType abstract base class are intended to operate on Thread objects
 
         Returns
         -------
@@ -140,7 +138,7 @@ class JobType(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def update_history(self, settings, **kwargs):
+    def update_history(self, thread, settings, **kwargs):
         """
         Update or initialize the history namespace for this job type.
 
@@ -158,8 +156,8 @@ class JobType(abc.ABC):
 
         Parameters
         ----------
-        self : Thread
-            Methods in the JobType abstract base class are intended to be invoked by Thread objects
+        thread : Thread
+            Methods in the JobType abstract base class are intended to operate on Thread objects
         settings : argparse.Namespace
             Settings namespace object
         kwargs : dict
@@ -174,14 +172,14 @@ class JobType(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def analyze(self, settings):
+    def analyze(self, thread, settings):
         """
-        Perform necessary analysis of a completed simulation step and store results as appropriate into self.history
+        Perform necessary analysis of a completed simulation step and store results as appropriate into thread.history
 
         Parameters
         ----------
-        self : Thread
-            Methods in the JobType abstract base class are intended to be invoked by Thread objects
+        thread : Thread
+            Methods in the JobType abstract base class are intended to operate on Thread objects
         settings : argparse.Namespace
             Settings namespace object
 
@@ -194,14 +192,14 @@ class JobType(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def algorithm(self, allthreads, settings):
+    def algorithm(self, thread, allthreads, settings):
         """
-        Implement the algorithm that determines the next step and sets up the appropriate self.history attributes
+        Implement the algorithm that determines the next step and sets up the appropriate thread.history attributes
 
         Parameters
         ----------
-        self : Thread
-            Methods in the JobType abstract base class are intended to be invoked by Thread objects
+        thread : Thread
+            Methods in the JobType abstract base class are intended to operate on Thread objects
         allthreads : list
             A list of all of the thread objects to consider during the algorithm.
         settings : argparse.Namespace
@@ -217,14 +215,14 @@ class JobType(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def gatekeeper(self, settings):
+    def gatekeeper(self, thread, settings):
         """
         Return boolean indicating whether job is ready for next interpretation step.
 
         Parameters
         ----------
-        self : Thread
-            Methods in the JobType abstract base class are intended to be invoked by Thread objects
+        thread : Thread
+            Methods in the JobType abstract base class are intended to operate on Thread objects
         settings : argparse.Namespace
             Settings namespace object
 
@@ -266,96 +264,96 @@ class isEE(JobType):
                     pass
         return list_to_return
 
-    def get_next_step(self, settings):
-        if self.history.muts:
-            return self.history.muts[-1]
+    def get_next_step(self, thread, settings):
+        if thread.history.muts:
+            return thread.history.muts[-1]
         else:
             return 'unmutated'
 
-    def get_input_file(self, settings):
+    def get_input_file(self, thread, settings):
         return settings.path_to_input_files + '/' + settings.job_type + '_' + settings.md_engine + '.in'
 
-    def get_batch_template(self, settings):
+    def get_batch_template(self, thread, settings):
         templ = settings.md_engine + '_' + settings.batch_system + '.tpl'
         if os.path.exists(settings.path_to_templates + '/' + templ):
             return templ
         else:
             raise FileNotFoundError('cannot find required template file: ' + templ)
 
-    def get_struct(self):
-        return self.history.inpcrd[-1], self.history.tops[-1]
+    def get_struct(self, thread):
+        return thread.history.inpcrd[-1], thread.history.tops[-1]
 
-    def update_history(self, settings, **kwargs):
+    def update_history(self, thread, settings, **kwargs):
         if 'initialize' in kwargs.keys():
             if kwargs['initialize']:
-                self.history = argparse.Namespace()
-                self.history.inpcrd = []            # list of strings; initialized by main.init_threads(), updated by algorithm
-                self.history.trajs = []             # list of strings; updated by update_history() called by process.py
-                self.history.tops = []              # list of strings; initialized by main.init_threads(), updated by algorithm
-                self.history.muts = []              # list of strings describing mutations tested; updated by algorithm
-                self.history.score = []             # list of scores; updated by analyze()
-                self.history.timestamps = []        # list of ints representing seconds since the epoch for the end of each step, updated by ?
+                thread.history = argparse.Namespace()
+                thread.history.inpcrd = []            # list of strings; initialized by main.init_threads(), updated by algorithm
+                thread.history.trajs = []             # list of strings; updated by update_history() called by process.py
+                thread.history.tops = []              # list of strings; initialized by main.init_threads(), updated by algorithm
+                thread.history.muts = []              # list of strings describing mutations tested; updated by algorithm
+                thread.history.score = []             # list of scores; updated by analyze()
+                thread.history.timestamps = []        # list of ints representing seconds since the epoch for the end of each step, updated by ?
             if not os.path.exists('algorithm_history.pkl'):     # initialize algorithm_history file if necessary
-                pickle.dump(self.history, open('algorithm_history.pkl', 'wb'))  # an empty self.history template
+                pickle.dump(thread.history, open('algorithm_history.pkl', 'wb'))  # an empty thread.history template
             if 'inpcrd' in kwargs.keys():
-                self.history.inpcrd.append(kwargs['inpcrd'])
-        else:   # self.history should already exist
+                thread.history.inpcrd.append(kwargs['inpcrd'])
+        else:   # thread.history should already exist
             if 'nc' in kwargs.keys():
-                if len(self.history.trajs) < self.suffix + 1:
-                    self.history.trajs.append([])
-                    if len(self.history.trajs) < self.suffix + 1:
+                if len(thread.history.trajs) < thread.suffix + 1:
+                    thread.history.trajs.append([])
+                    if len(thread.history.trajs) < thread.suffix + 1:
                         raise IndexError('history.prod_trajs is the wrong length for thread: ' +
-                                         self.history.inpcrd[0] + '\nexpected length: ' + str(self.suffix))
-                self.history.trajs[self.suffix].append(kwargs['nc'])
+                                         thread.history.inpcrd[0] + '\nexpected length: ' + str(thread.suffix))
+                thread.history.trajs[thread.suffix].append(kwargs['nc'])
 
-    def analyze(self, settings):
-        self.history.score.append(utilities.lie(self.history.trajs[-1], self.history.tops[-1], settings))
+    def analyze(self, thread, settings):
+        thread.history.score.append(utilities.lie(thread.history.trajs[-1], thread.history.tops[-1], settings))
 
-    def algorithm(self, allthreads, settings):
+    def algorithm(self, thread, allthreads, settings):
         # Get next mutation to apply from the desired algorithm, or else terminate
         this_algorithm = factory.algorithm_factory(settings.algorithm)
 
-        if not self.history.trajs:  # if this is the first step in this thread
-            next_step = this_algorithm.get_first_step(self, allthreads, settings)
+        if not thread.history.trajs:  # if this is the first step in this thread
+            next_step = this_algorithm.get_first_step(thread, allthreads, settings)
         else:
-            next_step = this_algorithm.get_next_step(self, settings)
+            next_step = this_algorithm.get_next_step(thread, settings)
 
         if next_step == 'WT':   # do nothing, correct structure is already set in history.tops and history.inpcrd
             return False        # False: do not terminate
 
         if next_step == 'IDLE':
-            self.idle = True
+            thread.idle = True
             return False        # False: do not terminate
 
-        self.idle = False       # explicitly reset idle to False whenever we get to this step
+        thread.idle = False       # explicitly reset idle to False whenever we get to this step
 
         if next_step == 'TER':  # algorithm says global termination     # todo: this should be thread termination, right? Global termination should be determined by some higher level process called in the main loop in main.py, I think.
             return True
 
         # Else, we have a new mutant to direct the thread to build and simulate
-        self.history.muts.append(next_step)
+        thread.history.muts.append(next_step)
 
         # Get index of previous step to use as base for next step
         base_index = 0  # for now we'll just use the original input structure
 
         # Perform desired mutation
-        new_inpcrd, new_top = utilities.mutate(self.history.inpcrd[base_index], self.history.tops[base_index], next_step, self.history.inpcrd[base_index] + '_' + next_step, settings)
+        new_inpcrd, new_top = utilities.mutate(thread.history.inpcrd[base_index], thread.history.tops[base_index], next_step, thread.history.inpcrd[base_index] + '_' + next_step, settings)
 
         # Update history and return
-        self.history.inpcrd.append(new_inpcrd)
-        self.history.tops.append(new_top)
-        self.suffix += 1
+        thread.history.inpcrd.append(new_inpcrd)
+        thread.history.tops.append(new_top)
+        thread.suffix += 1
 
         return False    # False: do not terminate
 
-    def gatekeeper(self, settings):
+    def gatekeeper(self, thread, settings):
         # first, check whether this thread is intentionally idling and if so, let the algorithm guide us
-        if self.idle:
+        if thread.idle:
             this_algorithm = factory.algorithm_factory(settings.algorithm)
             return this_algorithm.reevaluate_idle(self)
 
         # if job for this thread has status 'C'ompleted/'C'anceled...
-        if self.get_status(0, settings) == 'C':     # index 0 because there is only ever one element in self.jobids
+        if thread.get_status(0, settings) == 'C':     # index 0 because there is only ever one element in thread.jobids
             return True
         else:
             return False
