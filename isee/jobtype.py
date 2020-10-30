@@ -119,9 +119,9 @@ class JobType(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_inpcrd(self):
+    def get_struct(self):
         """
-        Return the name of the appropriate inpcrd file for the next step in the thread given by self.
+        Return the name of the appropriate inpcrd and topology files for the next step in the thread given by self.
 
         Parameters
         ----------
@@ -131,7 +131,9 @@ class JobType(abc.ABC):
         Returns
         -------
         inpcrd : str
-            String containing desired file name
+            String containing desired coordinate file name
+        top : str
+            String containing desired topology file name
 
         """
 
@@ -314,9 +316,9 @@ class isEE(JobType):
         this_algorithm = factory.algorithm_factory(settings.algorithm)
 
         if not self.history.trajs:  # if this is the first step in this thread
-            next_step = this_algorithm.get_first_step(None, self, allthreads, settings)
+            next_step = this_algorithm.get_first_step(self, allthreads, settings)
         else:
-            next_step = this_algorithm.get_next_step(None, self, settings)
+            next_step = this_algorithm.get_next_step(self, settings)
 
         if next_step == 'WT':   # do nothing, correct structure is already set in history.tops and history.inpcrd
             return False        # False: do not terminate
@@ -350,7 +352,7 @@ class isEE(JobType):
         # first, check whether this thread is intentionally idling and if so, let the algorithm guide us
         if self.idle:
             this_algorithm = factory.algorithm_factory(settings.algorithm)
-            return this_algorithm.reevaluate_idle(None, self)
+            return this_algorithm.reevaluate_idle(self)
 
         # if job for this thread has status 'C'ompleted/'C'anceled...
         if self.get_status(0, settings) == 'C':     # index 0 because there is only ever one element in self.jobids

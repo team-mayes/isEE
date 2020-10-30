@@ -24,7 +24,7 @@ def mdengine_factory(mdengine_toolkit):
 
     """
 
-    mdengine_toolkits = {'amber': mdengine.AdaptAmber}
+    mdengine_toolkits = {'amber': mdengine.AdaptAmber()}
 
     if mdengine_toolkit not in mdengine_toolkits.keys():
         raise ValueError('unsupported MDEngine name: ' + mdengine_toolkit)
@@ -48,9 +48,9 @@ def batchsystem_factory(batchsystem_toolkit):
 
     """
 
-    batchsystem_toolkits = {'slurm': batchsystem.AdaptSlurm,
-                            'pbs': batchsystem.AdaptPBS,
-                            'torque': batchsystem.AdaptPBS}   # torque and pbs are synonyms
+    batchsystem_toolkits = {'slurm': batchsystem.AdaptSlurm(),
+                            'pbs': batchsystem.AdaptPBS(),
+                            'torque': batchsystem.AdaptPBS()}   # torque and pbs are synonyms
 
     if batchsystem_toolkit not in batchsystem_toolkits.keys():
         raise ValueError('unsupported BatchSystem name: ' + batchsystem_toolkit)
@@ -74,7 +74,7 @@ def jobtype_factory(jobtype_toolkit):
 
     """
 
-    jobtype_toolkits = {'isee': jobtype.isEE}
+    jobtype_toolkits = {'isee': jobtype.isEE()}
 
     if jobtype_toolkit not in jobtype_toolkits.keys():
         raise ValueError('unsupported JobType name: ' + jobtype_toolkit)
@@ -98,7 +98,7 @@ def taskmanager_factory(taskmanager_toolkit):
 
     """
 
-    taskmanager_toolkits = {'simple': taskmanager.AdaptSimple}
+    taskmanager_toolkits = {'simple': taskmanager.AdaptSimple()}
 
     if taskmanager_toolkit not in taskmanager_toolkits.keys():
         raise ValueError('unsupported TaskManager name: ' + taskmanager_toolkit)
@@ -122,9 +122,9 @@ def algorithm_factory(algorithm_toolkit):
 
     """
 
-    algorithm_toolkits = {'script': algorithm.Script,
-                          'covariance_saturation': algorithm.CovarianceSaturation,
-                          'subnetwork_hotspots': algorithm.SubnetworkHotspots}
+    algorithm_toolkits = {'script': algorithm.Script(),
+                          'covariance_saturation': algorithm.CovarianceSaturation(),
+                          'subnetwork_hotspots': algorithm.SubnetworkHotspots()}
 
     if algorithm_toolkit not in algorithm_toolkits.keys():
         raise ValueError('unsupported Algorithm name: ' + algorithm_toolkit)

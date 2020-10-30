@@ -126,7 +126,7 @@ def init_threads(settings):
     except shutil.SameFileError:
         pass
 
-    for file in jobtype.get_initial_coordinates(None, settings):
+    for file in jobtype.get_initial_coordinates(settings):
         if '/' in file:
             file = file[file.rindex('/') + 1:]          # drop path to file from filename
 
