@@ -96,14 +96,12 @@ class JobType(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_batch_template(self, thread, settings):
+    def get_batch_template(self, settings):
         """
         Return name of batch template file for the type of job indicated.
 
         Parameters
         ----------
-        thread : Thread
-            Methods in the JobType abstract base class are intended to operate on Thread objects
         settings : argparse.Namespace
             Settings namespace object
 
@@ -273,7 +271,7 @@ class isEE(JobType):
     def get_input_file(self, thread, settings):
         return settings.path_to_input_files + '/' + settings.job_type + '_' + settings.md_engine + '.in'
 
-    def get_batch_template(self, thread, settings):
+    def get_batch_template(self, settings):
         templ = settings.md_engine + '_' + settings.batch_system + '.tpl'
         if os.path.exists(settings.path_to_templates + '/' + templ):
             return templ
@@ -293,8 +291,8 @@ class isEE(JobType):
                 thread.history.muts = []              # list of strings describing mutations tested; updated by algorithm
                 thread.history.score = []             # list of scores; updated by analyze()
                 thread.history.timestamps = []        # list of ints representing seconds since the epoch for the end of each step, updated by ?
-            if not os.path.exists('algorithm_history.pkl'):     # initialize algorithm_history file if necessary
-                pickle.dump(thread.history, open('algorithm_history.pkl', 'wb'))  # an empty thread.history template
+            if not os.path.exists(settings.working_directory + '/algorithm_history.pkl'):     # initialize algorithm_history file if necessary
+                pickle.dump(thread.history, open(settings.working_directory + '/algorithm_history.pkl', 'wb'))  # an empty thread.history template
             if 'inpcrd' in kwargs.keys():
                 thread.history.inpcrd.append(kwargs['inpcrd'])
         else:   # thread.history should already exist
@@ -303,7 +301,8 @@ class isEE(JobType):
                     thread.history.trajs.append([])
                     if len(thread.history.trajs) < thread.suffix + 1:
                         raise IndexError('history.prod_trajs is the wrong length for thread: ' +
-                                         thread.history.inpcrd[0] + '\nexpected length: ' + str(thread.suffix))
+                                         thread.history.inpcrd[0] + '\nexpected length: ' + str(thread.suffix + 1) +
+                                         ', but it is currently: ' + str(thread.history.trajs))
                 thread.history.trajs[thread.suffix].append(kwargs['nc'])
 
     def analyze(self, thread, settings):
@@ -343,6 +342,13 @@ class isEE(JobType):
         thread.history.inpcrd.append(new_inpcrd)
         thread.history.tops.append(new_top)
         thread.suffix += 1
+
+        if not thread.history.trajs:    # if this is the first step in this thread
+            # reformat thread data to reflect that 'WT' is being skipped
+            thread.history.inpcrd = [thread.history.inpcrd[-1]]
+            thread.history.tops = [thread.history.tops[-1]]
+            thread.history.muts = [thread.history.muts[-1]]
+            thread.suffix = 0
 
         return False    # False: do not terminate
 

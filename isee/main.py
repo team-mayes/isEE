@@ -67,19 +67,19 @@ class Thread(object):
 
     def get_batch_template(self, settings):
         jobtype = factory.jobtype_factory(settings.job_type)
-        return jobtype.get_batch_template(self, settings)
+        return jobtype.get_batch_template(settings)
 
     def get_frame(self, traj, frame, settings):
         mdengine = factory.mdengine_factory(settings.md_engine)
-        return mdengine.get_frame(self, traj, frame, settings)
+        return mdengine.get_frame(traj, frame, settings)
 
     def get_status(self, job_index, settings):
         batchsystem = factory.batchsystem_factory(settings.batch_system)
-        return batchsystem.get_status(self, self.jobids[job_index], settings)
+        return batchsystem.get_status(self.jobids[job_index], settings)
 
     def cancel_job(self, job_index, settings):
         batchsystem = factory.batchsystem_factory(settings.batch_system)
-        batchsystem.cancel_job(self, self.jobids[job_index], settings)
+        batchsystem.cancel_job(self.jobids[job_index], settings)
 
 
 def init_threads(settings):
