@@ -47,13 +47,10 @@ class AdaptSimple(TaskManager):
     """
 
     def submit_batch(self, filename, settings):
-        try:    # import here to avoid circular import
-            import factory
-        except ModuleNotFoundError:
-            import atesa.factory as factory
+        from isee.infrastructure import factory
 
         batchsystem = factory.batchsystem_factory(settings.batch_system)
-        command = batchsystem.get_submit_command(self).replace('{file}', filename)
+        command = batchsystem.get_submit_command().replace('{file}', filename)
 
         if settings.DEBUG:
             command = 'echo "this is a nonsense string for testing purposes: 123456, now here are some garbage symbols: ?!@#$/\';:[]+=_-.<,>"'

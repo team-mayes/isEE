@@ -191,7 +191,7 @@ class Script(Algorithm):
         if thread == allthreads[0] and not any([bool(item.history.trajs) for item in allthreads]):
             return 'WT'
         else:
-            return Script.get_next_step(self, thread, settings) # does calling this here make this method the super?
+            return Script.get_next_step(self, thread, settings)
 
     def get_next_step(self, thread, settings):
         untried = [item for item in settings.mutation_script if not item in self.algorithm_history.muts]
@@ -241,7 +241,7 @@ class CovarianceSaturation(Algorithm):
             saturation = False
 
         if saturation:
-            # Perform RMSD profile analysis
+            # Perform RMSD profile analysis # todo: change to operate on best-scoring mutant yet found
             rmsd_covar = utilities.covariance_profile(thread, -1, settings)     # -1: operate on most recent trajectory
 
             # Pick minimum RMSD residue that hasn't already been done
@@ -299,18 +299,93 @@ class SubnetworkHotspots(Algorithm):
     """
     Adapter class for algorithm that finds subnetworks within the protein structure (as defined by ___) and then uses
     the same method as the CovarianceSaturation algorithm to identify hotspots within subnetworks and perform saturation
-    mutagenesis on them. After saturation within each
+    mutagenesis on them. After saturation within each subnetwork is completed individually, combinations of the top
+    scoring mutants in each subnetwork are added together in search of complimentary effects
 
     """
 
+    # todo: this is currently just CovarianceSaturation, update it
     def get_first_step(self, thread, allthreads, settings):
-        pass
+        # if this is the first thread in allthreads and there are no history.trajs objects in any threads yet
+        if thread == allthreads[0] and not any([bool(item.history.trajs) for item in allthreads]):
+            return 'WT'
+        else:
+            return 'IDLE'   # need to wait for first simulation to finish before proceeding
 
     def get_next_step(self, thread, settings):
-        pass
+        all_resnames = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA', 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP']
+
+        if self.algorithm_history.muts == []:   # first ever mutation
+            saturation = True   # saturation = True means: pick a new residue to mutate
+
+        # Otherwise, saturation is defined by having tried all the residues in all_resnames (excluding the wild type)
+        # elif (the last (len(all_resnames) - 1) mutation resnames are all unique) and\
+        #   (all of the last (len(all_resnames) - 1) mutation resnames are in all_resnames) and\
+        #   (all of the last (len(all_resnames) - 1) mutation resids are equal to the last resid):
+        elif len(set([item[-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]])) == (len(all_resnames) - 1) and\
+                set([item[-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames))\
+                and all([item[:-3] == self.algorithm_history.muts[-1][:-3] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]):
+            saturation = True
+
+        else:
+            saturation = False
+
+        if saturation:
+            # Perform RMSD profile analysis
+            rmsd_covar = utilities.covariance_profile(thread, -1, settings)     # -1: operate on most recent trajectory
+
+            # Calculate subnetworks
+
+
+            # Pick minimum RMSD residue for a subnetwork that hasn't already been done
+            already_done = set([int(item[:-3]) for item in self.algorithm_history.muts] + [settings.covariance_reference_resid])
+            paired = []
+            i = 0
+            for value in rmsd_covar:
+                i += 1
+                paired.append([i, value])       # paired resid, rmsd-of-covariance
+            paired = sorted(paired, key=lambda x: x[1])         # sorted by ascending rmsd
+            resid = settings.covariance_reference_resid
+            this_index = 0
+            while resid in already_done:    # iterate through paired in order of ascending rmsd until resid is unused
+                resid = paired[this_index][0]
+                this_index += 1
+                if this_index >= len(paired):    # if there are no more residues to mutate
+                    return self.dump_and_return('TER', self.algorithm_history)
+
+            next_mut = str(int(resid)) + all_resnames[0]
+
+            algorithm_history.muts.append(next_mut)
+            buffer_history(self.algorithm_history)
+            return self.dump_and_return(next_mut, self.algorithm_history)
+        else:   # unsaturated, so pick an unused mutation on the same residue as the previous mutation
+            # First, we need to generate a list of all the mutations that haven't been tried yet on this residue
+            done = [item[-3:] for item in self.algorithm_history.muts if item[:-3] == self.algorithm_history.muts[-1][:-3]]
+            todo = [item for item in all_resnames if not item in done]
+
+            # Then, remove the wild type residue name from the list
+            mtop = mdtraj.load_prmtop(thread.history.tops[0])   # 0th topology corresponds to the "wild type" here
+            wt = mtop.residue(int(self.algorithm_history.muts[-1][:-3]) - 1)  # mdtraj topology is zero-indexed, so -1
+            if str(wt)[:3] in todo:
+                todo.remove(str(wt)[:3])   # wt is formatted as <three letter code><zero-indexed resid>
+
+            next_mut = self.algorithm_history.muts[-1][:-3] + todo[0]
+
+            algorithm_history.muts.append(next_mut)
+            buffer_history(self.algorithm_history)
+            return self.dump_and_return(next_mut, self.algorithm_history)
 
     def reevaluate_idle(self, thread):
-        pass
+        # The condition to meet for this algorithm to allow an idle thread to resume is simply that the simulation for
+        # the first system (non-mutated) is finished and has had get_next_step called on it
+        if os.path.exists('algorithm_history.pkl'):
+            algorithm_history = pickle.load(open('algorithm_history.pkl', 'rb'))
+            if algorithm_history.muts:
+                return True
+            else:
+                return False
+        else:
+            return False
 
 
 if __name__ == '__main__':

@@ -250,7 +250,7 @@ def main(settings, rescue_running=[]):
             for thread in running:
                 if thread.gatekeeper(settings):
                     termination_criterion, running = thread.interpret(allthreads, running, settings)
-                    if termination_criterion:
+                    if termination_criterion:   # global termination
                         for thread in running:    # todo: should I replace this with something to finish up running jobs and just block submission of new ones?
                             for job_index in range(len(thread.current_type)):
                                 thread.cancel_job(job_index, settings)

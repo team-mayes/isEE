@@ -318,16 +318,17 @@ class isEE(JobType):
             next_step = this_algorithm.get_next_step(thread, settings)
 
         if next_step == 'WT':   # do nothing, correct structure is already set in history.tops and history.inpcrd
-            return False        # False: do not terminate
+            return False        # False: do not globally terminate
 
         if next_step == 'IDLE':
             thread.idle = True
-            return False        # False: do not terminate
+            return False        # False: do not globally terminate
 
         thread.idle = False       # explicitly reset idle to False whenever we get to this step
 
-        if next_step == 'TER':  # algorithm says global termination     # todo: this should be thread termination, right? Global termination should be determined by some higher level process called in the main loop in main.py, I think.
-            return True
+        if next_step == 'TER':  # algorithm says thread termination
+            thread.terminated = True
+            return False        # False: do not globally terminate
 
         # Else, we have a new mutant to direct the thread to build and simulate
         thread.history.muts.append(next_step)
