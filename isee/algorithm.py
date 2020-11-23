@@ -317,7 +317,10 @@ class SubnetworkHotspots(Algorithm):
             return 'IDLE'   # need to wait for first simulation to finish before proceeding
 
     def get_next_step(self, thread, allthreads, settings):
-        all_resnames = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA', 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP']
+        if not settings.TEST:
+            all_resnames = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA', 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP']
+        else:   # much-truncated list to skip much of the busywork, for testing purposes
+            all_resnames = ['ALA', 'GLY']
 
         if self.algorithm_history.muts == []:   # first ever mutation
             saturation = True   # saturation = True means: pick a new residue to mutate
@@ -423,6 +426,8 @@ class SubnetworkHotspots(Algorithm):
             if str(wt)[:3] in todo:
                 todo.remove(str(wt)[:3])   # wt is formatted as <three letter code><zero-indexed resid>
 
+            print('todo' + str(todo))   # for debugging
+            print('self.algorithm_history.muts: ' + str(self.algorithm_history.muts))   # for debugging
             next_mut = [self.algorithm_history.muts[-1][0][:-3] + todo[0]]
 
             self.algorithm_history.muts.append(next_mut)

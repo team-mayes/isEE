@@ -316,6 +316,10 @@ def mutate(coords, topology, mutation, name, settings):
 
     settings.ts_bonds = temp_ts_bonds   # todo: k-k-k-kludge
 
+    if settings.TEST:   # skip minimization to save time
+        os.rename(mutated_rst, name + '_min.rst7')
+        return name + '_min.rst7', mutated_top
+
     ### Minimize with OpenMM
     # First, cast .prmtop to OpenMM topology todo: replace Amber-specific stuff with call to method of MDEngine that returns an OpenMM Simulation object
     openmm_top = AmberPrmtopFile(mutated_top)
@@ -344,6 +348,7 @@ def mutate(coords, topology, mutation, name, settings):
     # if os.path.exists(new_name + '_min.rst7.1'):
     #     os.rename(new_name + '_min.rst7.1', new_name + '_min.rst7')
 
+    # Finally, return the coordinate and topology files!
     return name + '_min.rst7', mutated_top
 
 

@@ -264,7 +264,7 @@ class isEE(JobType):
 
     def get_next_step(self, thread, settings):
         if thread.history.muts:
-            return thread.history.muts[-1]
+            return '_'.join(thread.history.muts[-1])
         else:
             return 'unmutated'
 
@@ -288,7 +288,7 @@ class isEE(JobType):
                 thread.history.inpcrd = []            # list of strings; initialized by main.init_threads(), updated by algorithm
                 thread.history.trajs = []             # list of strings; updated by update_history() called by process.py
                 thread.history.tops = []              # list of strings; initialized by main.init_threads(), updated by algorithm
-                thread.history.muts = []              # list of strings describing mutations tested; updated by algorithm
+                thread.history.muts = []              # list of lists of strings describing mutations tested; updated by algorithm
                 thread.history.score = []             # list of scores; updated by analyze()
                 thread.history.timestamps = []        # list of ints representing seconds since the epoch for the end of each step, updated by ?
             if not os.path.exists(settings.working_directory + '/algorithm_history.pkl'):     # initialize algorithm_history file if necessary

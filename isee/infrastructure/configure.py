@@ -82,6 +82,7 @@ def configure(input_file, user_working_directory=''):
         paths_to_forcefields: typing.List[str] = ['']
 
         # Not expected to be set by user
+        TEST: bool = False      # True causes some functions to use much less rigorous methods, for testing purposes
         DEBUG: bool = False     # True causes some functions to return dummy values for testing purposes
         dont_dump: bool = False     # when True, prevents dumping settings to settings.pkl
 
