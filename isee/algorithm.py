@@ -266,7 +266,7 @@ class CovarianceSaturation(Algorithm):
 
             next_mut = [str(int(resid)) + all_resnames[0]]
 
-            algorithm_history.muts.append(next_mut)
+            self.algorithm_history.muts.append(next_mut)
             buffer_history(self.algorithm_history)
             return self.dump_and_return(next_mut, self.algorithm_history)
         else:   # unsaturated, so pick an unused mutation on the same residue as the previous mutation
@@ -282,7 +282,7 @@ class CovarianceSaturation(Algorithm):
 
             next_mut = [self.algorithm_history.muts[-1][:-3] + todo[0]]
 
-            algorithm_history.muts.append(next_mut)
+            self.algorithm_history.muts.append(next_mut)
             buffer_history(self.algorithm_history)
             return self.dump_and_return(next_mut, self.algorithm_history)
 
@@ -387,7 +387,7 @@ class SubnetworkHotspots(Algorithm):
                     # Finally, construct list of combinations to attempt, and pick one:
                     combinations = [list(item) for item in list(itertools.combinations(best_scorers, 2)) if not list(item) in self.algorithm_history.muts]
                     if combinations:    # if undone combinations remain
-                        algorithm_history.muts.append(combinations[0])
+                        self.algorithm_history.muts.append(combinations[0])
                         buffer_history(self.algorithm_history)
                         return self.dump_and_return(combinations[0], self.algorithm_history)
                     else:
@@ -409,7 +409,7 @@ class SubnetworkHotspots(Algorithm):
 
             next_mut = [str(int(resid)) + all_resnames[0]]
 
-            algorithm_history.muts.append(next_mut)
+            self.algorithm_history.muts.append(next_mut)
             buffer_history(self.algorithm_history)
             return self.dump_and_return(next_mut, self.algorithm_history)
         else:   # unsaturated, so pick an unused mutation on the same residue as the previous mutation
@@ -425,7 +425,7 @@ class SubnetworkHotspots(Algorithm):
 
             next_mut = [self.algorithm_history.muts[-1][0][:-3] + todo[0]]
 
-            algorithm_history.muts.append(next_mut)
+            self.algorithm_history.muts.append(next_mut)
             buffer_history(self.algorithm_history)
             return self.dump_and_return(next_mut, self.algorithm_history)
 
