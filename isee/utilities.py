@@ -131,8 +131,9 @@ def mutate(coords, topology, mutation, name, settings):
         Path to the coordinate file to mutate
     topology : str
         Path to the topology file corresponding to coords
-    mutation : str
-        Mutation to apply, given as "<resid><three-letter code>". For example, "70ASP" mutates residue 70 to aspartate
+    mutation : list
+        List of mutations to apply, each given as "<resid><three-letter code>". For example, "70ASP" mutates residue 70
+        to aspartate.
     name : str
         String to prepend to all filenames produced by this method
     settings : argparse.Namespace
@@ -250,15 +251,22 @@ def mutate(coords, topology, mutation, name, settings):
     traj.strip('!(' + protein_resnames + ')')
     pytraj.write_traj(name + '_prot.pdb', traj, overwrite=True)
 
-    ### Mutate  # todo: consider implementing multiple simultaneous mutations by looping this block
-    pattern = re.compile('\s+[A-Z0-9]+\s+[A-Z]{3}\s+' + mutation[:-3])
-    with open(name + '_mutated.pdb','w') as f:
+    ### Mutate
+    with open(name + '_mutated.pdb', 'w') as f:
+        patterns = [re.compile('\s+[A-Z0-9]+\s+[A-Z]{3}\s+' + mutant[:-3].upper()) for mutant in mutation]
         for line in open(name + '_prot.pdb', 'r').readlines():
-            if not pattern.findall(line) == []:
-                if pattern.findall(line)[0].split()[0] in ['C','N','O','CA']:
-                    newline = line.replace(pattern.findall(line)[0].split()[1], mutation[-3:].upper())
-                else:
-                    newline = ''
+            if not all(pattern.findall(line) == [] for pattern in patterns):
+                pat_index = 0
+                for pattern in patterns:
+                    try:
+                        if pattern.findall(line)[0].split()[0] in ['C','N','O','CA']:
+                            newline = line.replace(pattern.findall(line)[0].split()[1], mutation[pat_index][-3:].upper())
+                            break
+                        else:
+                            newline = ''
+                    except IndexError:  # happens when line doesn't match pattern
+                        pass
+                    pat_index += 1
             else:
                 newline = line
             f.write(newline)
@@ -402,7 +410,7 @@ if __name__ == '__main__':
     coords = 'data/one_frame.rst7'
     topology = 'data/TmAfc_D224G_t200.prmtop'
 
-    #mutate(coords, topology, '70ASP', 'test', settings)
+    mutate(coords, topology, ['64ASP','60ALA'], 'test', settings)
 
     thread = main.Thread()
     thread.history.trajs = ['']

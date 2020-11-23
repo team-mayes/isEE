@@ -315,7 +315,7 @@ class isEE(JobType):
         if not thread.history.trajs:  # if this is the first step in this thread
             next_step = this_algorithm.get_first_step(thread, allthreads, settings)
         else:
-            next_step = this_algorithm.get_next_step(thread, settings)
+            next_step = this_algorithm.get_next_step(thread, allthreads, settings)
 
         if next_step == 'WT':   # do nothing, correct structure is already set in history.tops and history.inpcrd
             return False        # False: do not globally terminate
@@ -337,7 +337,7 @@ class isEE(JobType):
         base_index = 0  # for now we'll just use the original input structure
 
         # Perform desired mutation
-        new_inpcrd, new_top = utilities.mutate(thread.history.inpcrd[base_index], thread.history.tops[base_index], next_step, thread.history.inpcrd[base_index] + '_' + next_step, settings)
+        new_inpcrd, new_top = utilities.mutate(thread.history.inpcrd[base_index], thread.history.tops[base_index], next_step, thread.history.inpcrd[base_index] + '_' + '_'.join(next_step), settings)
 
         # Update history and return
         thread.history.inpcrd.append(new_inpcrd)

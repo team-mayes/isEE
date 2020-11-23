@@ -11,6 +11,7 @@ import shutil
 import pickle
 import mdtraj
 import argparse
+import itertools
 import subprocess
 from isee.infrastructure import factory
 from isee import utilities
@@ -108,17 +109,18 @@ class Algorithm(abc.ABC):
 
         Returns
         -------
-        first_step : str
-            Next mutation to apply to the system, formatted as <resid><three-letter-code>; alternatively, 'TER' if
-            terminating or 'IDLE' if doing nothing. Finally, can also return 'WT' to indicate that the simulation should
-            proceed with the structure passed directly to isEE, without mutation.
+        first_step : list or str
+            List of first mutation(s) to apply to the system, formatted as a list of strings of format
+            <resid><three-letter-code>; alternatively, 'TER' if terminating or 'IDLE' if doing nothing. Finally, can
+            also return 'WT' to indicate that the simulation should roceed with the structure passed directly to isEE,
+            without mutation.
 
         """
 
         pass
 
     @abc.abstractmethod
-    def get_next_step(self, thread, settings):
+    def get_next_step(self, thread, allthreads, settings):
         """
         Determine the next step for the thread, or return 'TER' if there is none or 'IDLE' if information from other
         threads is required before the next step can be determined.
@@ -142,14 +144,16 @@ class Algorithm(abc.ABC):
         ----------
         thread : Thread()
             Thread object to consider
+        allthreads : list
+            Full list of Thread() objects for this job (including thread)
         settings : argparse.Namespace
             Settings namespace object
 
         Returns
         -------
-        next_step : str
-            Next mutation to apply to the system, formatted as <resid><three-letter-code>; alternatively, 'TER' if
-            terminating or 'IDLE' if doing nothing.
+        next_step : list or str
+            Next mutation(s) to apply to the system, formatted as a list of strings of format
+            <resid><three-letter-code>; alternatively, 'TER' if terminating or 'IDLE' if doing nothing.
 
         """
 
@@ -193,12 +197,12 @@ class Script(Algorithm):
         else:
             return Script.get_next_step(self, thread, settings)
 
-    def get_next_step(self, thread, settings):
+    def get_next_step(self, thread, allthreads, settings):
         untried = [item for item in settings.mutation_script if not item in self.algorithm_history.muts]
         try:
-            self.algorithm_history.muts.append(untried[0])
+            self.algorithm_history.muts.append([untried[0]])
             buffer_history(self.algorithm_history)
-            return self.dump_and_return(untried[0], self.algorithm_history)   # first untried mutation
+            return self.dump_and_return([untried[0]], self.algorithm_history)   # first untried mutation
         except IndexError:  # no untried mutation remains
             return self.dump_and_return('TER', self.algorithm_history)
 
@@ -222,7 +226,7 @@ class CovarianceSaturation(Algorithm):
         else:
             return 'IDLE'   # need to wait for first simulation to finish before proceeding
 
-    def get_next_step(self, thread, settings):
+    def get_next_step(self, thread, allthreads, settings):
         all_resnames = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA', 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP']
 
         if self.algorithm_history.muts == []:   # first ever mutation
@@ -232,9 +236,9 @@ class CovarianceSaturation(Algorithm):
         # elif (the last (len(all_resnames) - 1) mutation resnames are all unique) and\
         #   (all of the last (len(all_resnames) - 1) mutation resnames are in all_resnames) and\
         #   (all of the last (len(all_resnames) - 1) mutation resids are equal to the last resid):
-        elif len(set([item[-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]])) == (len(all_resnames) - 1) and\
-                set([item[-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames))\
-                and all([item[:-3] == self.algorithm_history.muts[-1][:-3] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]):
+        elif len(set([item[0][-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]])) == (len(all_resnames) - 1) and\
+                set([item[0][-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames))\
+                and all([item[0][:-3] == self.algorithm_history.muts[-1][:-3] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]):
             saturation = True
 
         else:
@@ -260,14 +264,14 @@ class CovarianceSaturation(Algorithm):
                 if this_index >= len(paired):    # if there are no more residues to mutate
                     return self.dump_and_return('TER', self.algorithm_history)
 
-            next_mut = str(int(resid)) + all_resnames[0]
+            next_mut = [str(int(resid)) + all_resnames[0]]
 
             algorithm_history.muts.append(next_mut)
             buffer_history(self.algorithm_history)
             return self.dump_and_return(next_mut, self.algorithm_history)
         else:   # unsaturated, so pick an unused mutation on the same residue as the previous mutation
             # First, we need to generate a list of all the mutations that haven't been tried yet on this residue
-            done = [item[-3:] for item in self.algorithm_history.muts if item[:-3] == self.algorithm_history.muts[-1][:-3]]
+            done = [item[0][-3:] for item in self.algorithm_history.muts if item[:-3] == self.algorithm_history.muts[-1][:-3]]
             todo = [item for item in all_resnames if not item in done]
 
             # Then, remove the wild type residue name from the list
@@ -276,7 +280,7 @@ class CovarianceSaturation(Algorithm):
             if str(wt)[:3] in todo:
                 todo.remove(str(wt)[:3])   # wt is formatted as <three letter code><zero-indexed resid>
 
-            next_mut = self.algorithm_history.muts[-1][:-3] + todo[0]
+            next_mut = [self.algorithm_history.muts[-1][:-3] + todo[0]]
 
             algorithm_history.muts.append(next_mut)
             buffer_history(self.algorithm_history)
@@ -312,7 +316,7 @@ class SubnetworkHotspots(Algorithm):
         else:
             return 'IDLE'   # need to wait for first simulation to finish before proceeding
 
-    def get_next_step(self, thread, settings):
+    def get_next_step(self, thread, allthreads, settings):
         all_resnames = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA', 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP']
 
         if self.algorithm_history.muts == []:   # first ever mutation
@@ -322,9 +326,13 @@ class SubnetworkHotspots(Algorithm):
         # elif (the last (len(all_resnames) - 1) mutation resnames are all unique) and\
         #   (all of the last (len(all_resnames) - 1) mutation resnames are in all_resnames) and\
         #   (all of the last (len(all_resnames) - 1) mutation resids are equal to the last resid):
-        elif len(set([item[-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]])) == (len(all_resnames) - 1) and\
-                set([item[-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames))\
-                and all([item[:-3] == self.algorithm_history.muts[-1][:-3] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]):
+        elif len(set([item[0][-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]])) == (len(all_resnames) - 1) and\
+                set([item[0][-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames))\
+                and all([item[0][:-3] == self.algorithm_history.muts[-1][:-3] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]):
+            saturation = True
+
+        # Alternatively, if there are any double or higher mutants in the algorithm history, consider it saturated
+        elif any([len(item) > 1 for item in self.algorithm_history.muts]):
             saturation = True
 
         else:
@@ -335,41 +343,87 @@ class SubnetworkHotspots(Algorithm):
             rmsd_covar = utilities.covariance_profile(thread, -1, settings)     # -1: operate on most recent trajectory
 
             # Calculate subnetworks
-
+            ### KLUDGE KLUDGE KLUDGE ###
+            # todo: remove kludge, implement general solution
+            # A list of lists of 1-indexed resids constituting each subnetwork
+            # This one is intentionally ordered to put the subnetwork containing the catalytic residue first.
+            subnetworks = [[399, 188, 47, 45, 361, 394, 266, 53, 181, 49, 185, 71, 379, 52, 50, 67, 70, 54, 180, 360, 177, 182, 64, 178, 363, 69, 51, 362, 260, 56, 261, 418, 48, 365, 367, 357, 72, 44, 41, 176, 368, 391, 392, 393, 184, 395, 396, 397, 265, 414, 311, 55, 61, 263, 262, 398, 42, 46, 369, 304, 358, 282, 66, 364, 359, 415, 416, 417, 68, 419, 420, 421, 413, 179, 43, 307, 57, 366, 422, 63, 58, 412, 62, 65, 390, 183, 73, 39, 40, 74, 308, 400],
+                            [402, 440, 371, 167, 351, 171, 310, 376, 352, 316, 349, 276, 173, 378, 377, 313, 122, 277, 441, 125, 22, 175, 23, 165, 124, 370, 121, 348, 315, 401, 306, 172, 372, 309, 123, 314],
+                            [29, 60, 344, 32, 410, 320, 409, 87, 408, 343, 405, 404, 323, 88, 341, 327, 342, 339, 27, 25, 317, 89, 31, 322, 319, 33, 90, 438, 406, 338, 345, 336, 403, 28, 407, 30, 346, 278, 335, 380, 347, 34, 340, 305, 321, 284, 439, 26, 286, 318, 285],
+                            [134, 152, 153, 120, 92, 111, 325, 210, 96, 97, 98, 99, 100, 101, 102, 21, 104, 105, 106, 107, 108, 109, 110, 209, 112, 113, 114, 115, 116, 117, 118, 20, 91, 324, 93, 119, 24, 350, 94, 146, 128, 129, 130, 131, 132, 133, 326, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 127, 147, 148, 149, 150, 151, 95, 103, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 126],
+                            [234, 264, 3, 275, 218, 170, 2, 10, 11, 9, 1, 12, 13, 14, 15, 169, 168, 16, 374, 19, 186, 187, 353, 206, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 8, 201, 224, 203, 204, 375, 202, 207, 208, 205, 18, 17, 211, 213, 214, 215, 216, 217, 312, 356, 5, 221, 222, 223, 189, 258, 226, 227, 228, 229, 230, 231, 232, 233, 7, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 225, 166, 4, 212, 174, 219, 220, 259, 354, 267, 268, 269, 270, 271, 272, 373, 274, 273, 200, 6, 355],
+                            [435, 434, 384, 38, 430, 427, 431, 426, 287, 288, 383, 300, 436, 293, 78, 280, 291, 386, 299, 298, 297, 333, 303, 81, 84, 82, 387, 388, 334, 85, 295, 79, 425, 76, 294, 83, 80, 292, 385, 301, 289, 296, 75, 411, 283, 279, 37, 302, 437, 328, 329, 86, 331, 59, 35, 428, 433, 332, 337, 389, 424, 432, 290, 382, 77, 281, 330, 423, 429, 381, 36]]
+            ### KLUDGE KLUDGE KLUDGE ###
 
             # Pick minimum RMSD residue for a subnetwork that hasn't already been done
-            already_done = set([int(item[:-3]) for item in self.algorithm_history.muts] + [settings.covariance_reference_resid])
+            already_done = set([int(item[0][:-3]) for item in self.algorithm_history.muts])
+
+            # Choose next unmutated subnetwork
+            next_subnetwork = 0
+            while any([item in subnetworks[next_subnetwork] for item in already_done]):     # iterate through subnetworks
+                next_subnetwork += 1
+                if next_subnetwork == len(subnetworks): # no more subnetworks unmutated, so now do combinations
+                    # Need to build a list of lists containing combinations of the most promising single mutants
+                    # This will require pairing history.muts and history.score data (can I keep track of score data in algorithm_history?)
+                    score_and_muts = []   # full paired set of scores and single mutants across all threads to date
+                    for this_thread in allthreads:
+                        for step_index in range(len(this_thread.history.muts)):
+                            if not len(this_thread.history.muts[step_index]) > 1:   # skip anything not a single mutant
+                                score_and_muts.append([this_thread.history.score[step_index], this_thread.history.muts[step_index]])
+                    # Now, prune all mutants who are not the best-scoring at that index
+                    score_and_muts = sorted(score_and_muts, key=lambda x: x[1][0])  # sort by mutation
+                    score_and_muts.append([0,['None']])   # kludge to make the coming for loop work properly
+                    this_mut = score_and_muts[0][1][0]
+                    best_index = 0
+                    best_scorers = []   # list of best single mutations at each attempted index
+                    for item_index in range(len(score_and_muts)):
+                        if not score_and_muts[item_index][1][0][:-3] == this_mut[:-3]:
+                            this_mut = score_and_muts[item_index][1][0]
+                            best_scorers.append(score_and_muts[best_index][1][0])
+                            best_index = item_index
+                        if score_and_muts[item_index][0] < score_and_muts[best_index][0]:
+                            best_index = item_index
+
+                    # Finally, construct list of combinations to attempt, and pick one:
+                    combinations = [list(item) for item in list(itertools.combinations(best_scorers, 2)) if not list(item) in self.algorithm_history.muts]
+                    if combinations:    # if undone combinations remain
+                        algorithm_history.muts.append(combinations[0])
+                        buffer_history(self.algorithm_history)
+                        return self.dump_and_return(combinations[0], self.algorithm_history)
+                    else:
+                        return self.dump_and_return('TER', self.algorithm_history)
+
+            # Pick a new mutation in the chosen unmutated subnetwork; reached only if unmutated subnetworks remain
+            subnetwork = subnetworks[next_subnetwork]
             paired = []
-            i = 0
-            for value in rmsd_covar:
-                i += 1
-                paired.append([i, value])       # paired resid, rmsd-of-covariance
-            paired = sorted(paired, key=lambda x: x[1])         # sorted by ascending rmsd
+            for i in range(len(subnetwork)):
+                paired.append([subnetwork[i], rmsd_covar[i]])   # paired resid, rmsd-of-covariance
+            paired = sorted(paired, key=lambda x: x[1])             # sorted by ascending rmsd
             resid = settings.covariance_reference_resid
             this_index = 0
-            while resid in already_done:    # iterate through paired in order of ascending rmsd until resid is unused
+            while resid in [already_done] + [settings.covariance_reference_resid]:    # iterate through paired in order of ascending rmsd until resid is unused
                 resid = paired[this_index][0]
                 this_index += 1
-                if this_index >= len(paired):    # if there are no more residues to mutate
+                if this_index >= len(paired):    # if there are no more residues to mutate; should be inaccessible
                     return self.dump_and_return('TER', self.algorithm_history)
 
-            next_mut = str(int(resid)) + all_resnames[0]
+            next_mut = [str(int(resid)) + all_resnames[0]]
 
             algorithm_history.muts.append(next_mut)
             buffer_history(self.algorithm_history)
             return self.dump_and_return(next_mut, self.algorithm_history)
         else:   # unsaturated, so pick an unused mutation on the same residue as the previous mutation
             # First, we need to generate a list of all the mutations that haven't been tried yet on this residue
-            done = [item[-3:] for item in self.algorithm_history.muts if item[:-3] == self.algorithm_history.muts[-1][:-3]]
+            done = [item[0][-3:] for item in self.algorithm_history.muts if item[0][:-3] == self.algorithm_history.muts[-1][0][:-3]]
             todo = [item for item in all_resnames if not item in done]
 
             # Then, remove the wild type residue name from the list
             mtop = mdtraj.load_prmtop(thread.history.tops[0])   # 0th topology corresponds to the "wild type" here
-            wt = mtop.residue(int(self.algorithm_history.muts[-1][:-3]) - 1)  # mdtraj topology is zero-indexed, so -1
+            wt = mtop.residue(int(self.algorithm_history.muts[-1][0][:-3]) - 1)  # mdtraj topology is zero-indexed, so -1
             if str(wt)[:3] in todo:
                 todo.remove(str(wt)[:3])   # wt is formatted as <three letter code><zero-indexed resid>
 
-            next_mut = self.algorithm_history.muts[-1][:-3] + todo[0]
+            next_mut = [self.algorithm_history.muts[-1][0][:-3] + todo[0]]
 
             algorithm_history.muts.append(next_mut)
             buffer_history(self.algorithm_history)
