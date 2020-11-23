@@ -147,7 +147,7 @@ def init_threads(settings):
     return allthreads
 
 
-def handle_loop_exception(running, settings):
+def handle_loop_exception(running, exception, settings):
     """
     Handle cancellation of jobs after encountering an exception.
 
@@ -156,6 +156,8 @@ def handle_loop_exception(running, settings):
     running : list
         List of Thread objects that are currently running. These are the threads that will be canceled if the ATESA run
         cannot be rescued.
+    exception : Exception
+        The exception that triggered calling this function
     settings : argparse.Namespace
         Settings namespace object
 
@@ -172,10 +174,12 @@ def handle_loop_exception(running, settings):
             for job_index in range(len(thread.jobids)):
                 thread.cancel_job(job_index, settings)
         except Exception as little_e:
-            print('\nEncountered exception while attempting to cancel a job: ' + str(little_e) +
+            print('\nEncountered an additional exception while attempting to cancel a job: ' + str(little_e) +
                   '\nIgnoring and continuing...')
 
-    return 'Job cancellation complete, ATESA is now shutting down.'
+    print('Job cancellation complete, ATESA is now shutting down. The full exception that triggered this was: ')
+
+    raise exception
 
 
 def main(settings, rescue_running=[]):
@@ -262,7 +266,7 @@ def main(settings, rescue_running=[]):
 
     except Exception as e:  # catch arbitrary exceptions in the main loop so we can cancel jobs
         print(str(e))
-        return handle_loop_exception(running, settings)
+        handle_loop_exception(running, e, settings)
 
     if termination_criterion:
         return 'isEE run exiting normally (global termination criterion met)'
