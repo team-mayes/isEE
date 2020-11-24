@@ -70,7 +70,7 @@ def configure(input_file, user_working_directory=''):
         # For algorithm = 'script'
         mutation_script: typing.List[str] = ['']
 
-        # For algorithm = 'covariance_saturation'
+        # For algorithms 'covariance_saturation' and 'subnetwork_hotspots'
         covariance_reference_resid: int = -1
 
         # Linear Interaction Energy parameters

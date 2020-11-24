@@ -401,7 +401,7 @@ class SubnetworkHotspots(Algorithm):
             paired = []
             for i in range(len(subnetwork)):
                 paired.append([subnetwork[i], rmsd_covar[i]])   # paired resid, rmsd-of-covariance
-            paired = sorted(paired, key=lambda x: x[1])             # sorted by ascending rmsd
+            paired = sorted(paired, key=lambda x: x[1])         # sorted by ascending rmsd
             resid = settings.covariance_reference_resid
             this_index = 0
             while resid in [already_done] + [settings.covariance_reference_resid]:    # iterate through paired in order of ascending rmsd until resid is unused

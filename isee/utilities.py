@@ -375,6 +375,9 @@ def covariance_profile(thread, move_index, settings):
 
     """
 
+    if settings.covariance_reference_resid == -1:
+        raise RuntimeError('trying to assess a covariance profile without setting the covariance_reference_resid')
+
     traj = pytraj.iterload(thread.history.trajs[move_index], thread.history.tops[move_index])
     covar_3d = pytraj.matrix.covar(traj, '@CA')     # covariance matrix of alpha carbons; 3Nx3N matrix for N alpha carbons
 
@@ -389,7 +392,7 @@ def covariance_profile(thread, move_index, settings):
     covar = [[numpy.mean(covar_3d[i:i+2,j:j+2]) for i in range(0, N, 3)] for j in range(0, N, 3)]
 
     # Now, calculate the RMSD between each residue's covariance profile and that of the reference residue and return
-    ref_profile = covar[settings.covariance_reference_resid + 1]    # + 1 because resids are 1-indexed
+    ref_profile = covar[settings.covariance_reference_resid - 1]    # - 1 because resids are 1-indexed
     rmsd_covariance_profile = [
         numpy.sqrt(sum([(ref_profile[j] - covar[resid][j]) ** 2 for j in range(len(covar[resid]))]) / len(covar[resid]))
         for resid in range(len(ref_profile))]
