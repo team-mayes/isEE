@@ -238,7 +238,7 @@ class CovarianceSaturation(Algorithm):
         #   (all of the last (len(all_resnames) - 1) mutation resids are equal to the last resid):
         elif len(set([item[0][-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]])) == (len(all_resnames) - 1) and\
                 set([item[0][-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames))\
-                and all([item[0][:-3] == self.algorithm_history.muts[-1][:-3] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]):
+                and all([item[0][:-3] == self.algorithm_history.muts[-1][0][:-3] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]):
             saturation = True
 
         else:
@@ -271,16 +271,16 @@ class CovarianceSaturation(Algorithm):
             return self.dump_and_return(next_mut, self.algorithm_history)
         else:   # unsaturated, so pick an unused mutation on the same residue as the previous mutation
             # First, we need to generate a list of all the mutations that haven't been tried yet on this residue
-            done = [item[0][-3:] for item in self.algorithm_history.muts if item[:-3] == self.algorithm_history.muts[-1][:-3]]
+            done = [item[0][-3:] for item in self.algorithm_history.muts if item[:-3] == self.algorithm_history.muts[-1][0][:-3]]
             todo = [item for item in all_resnames if not item in done]
 
             # Then, remove the wild type residue name from the list
             mtop = mdtraj.load_prmtop(thread.history.tops[0])   # 0th topology corresponds to the "wild type" here
-            wt = mtop.residue(int(self.algorithm_history.muts[-1][:-3]) - 1)  # mdtraj topology is zero-indexed, so -1
+            wt = mtop.residue(int(self.algorithm_history.muts[-1][0][:-3]) - 1)  # mdtraj topology is zero-indexed, so -1
             if str(wt)[:3] in todo:
                 todo.remove(str(wt)[:3])   # wt is formatted as <three letter code><zero-indexed resid>
 
-            next_mut = [self.algorithm_history.muts[-1][:-3] + todo[0]]
+            next_mut = [self.algorithm_history.muts[-1][0][:-3] + todo[0]]
 
             self.algorithm_history.muts.append(next_mut)
             buffer_history(self.algorithm_history)
@@ -330,8 +330,8 @@ class SubnetworkHotspots(Algorithm):
         #   (all of the last (len(all_resnames) - 1) mutation resnames are in all_resnames) and\
         #   (all of the last (len(all_resnames) - 1) mutation resids are equal to the last resid):
         elif len(set([item[0][-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]])) == (len(all_resnames) - 1) and\
-                set([item[0][-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames))\
-                and all([item[0][:-3] == self.algorithm_history.muts[-1][:-3] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]):
+                set([item[0][-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames)) and\
+                all([item[0][:-3] == self.algorithm_history.muts[-1][0][:-3] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]):
             saturation = True
 
         # Alternatively, if there are any double or higher mutants in the algorithm history, consider it saturated
@@ -426,8 +426,6 @@ class SubnetworkHotspots(Algorithm):
             if str(wt)[:3] in todo:
                 todo.remove(str(wt)[:3])   # wt is formatted as <three letter code><zero-indexed resid>
 
-            print('todo' + str(todo))   # for debugging
-            print('self.algorithm_history.muts: ' + str(self.algorithm_history.muts))   # for debugging
             next_mut = [self.algorithm_history.muts[-1][0][:-3] + todo[0]]
 
             self.algorithm_history.muts.append(next_mut)
