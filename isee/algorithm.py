@@ -195,7 +195,7 @@ class Script(Algorithm):
         if thread == allthreads[0] and not any([bool(item.history.trajs) for item in allthreads]):
             return 'WT'
         else:
-            return Script.get_next_step(self, thread, settings)
+            return Script.get_next_step(self, thread, allthreads, settings)
 
     def get_next_step(self, thread, allthreads, settings):
         untried = [item for item in settings.mutation_script if not item in self.algorithm_history.muts]
@@ -223,6 +223,8 @@ class CovarianceSaturation(Algorithm):
         # if this is the first thread in allthreads and there are no history.trajs objects in any threads yet
         if thread == allthreads[0] and not any([bool(item.history.trajs) for item in allthreads]):
             return 'WT'
+        elif len(allthreads[0].history.trajs >= 2):     # if this is True, then the first trajectory is completed!
+            return CovarianceSaturation.get_next_step(self, thread, allthreads, settings)
         else:
             return 'IDLE'   # need to wait for first simulation to finish before proceeding
 
@@ -246,7 +248,7 @@ class CovarianceSaturation(Algorithm):
 
         if saturation:
             # Perform RMSD profile analysis # todo: change to operate on best-scoring mutant yet found
-            rmsd_covar = utilities.covariance_profile(thread, -1, settings)     # -1: operate on most recent trajectory
+            rmsd_covar = utilities.covariance_profile(allthreads[0], 0, settings)  # operate on wild type trajectory
 
             # Pick minimum RMSD residue that hasn't already been done
             already_done = set([int(item[:-3]) for item in self.algorithm_history.muts] + [settings.covariance_reference_resid])
@@ -313,6 +315,8 @@ class SubnetworkHotspots(Algorithm):
         # if this is the first thread in allthreads and there are no history.trajs objects in any threads yet
         if thread == allthreads[0] and not any([bool(item.history.trajs) for item in allthreads]):
             return 'WT'
+        elif len(allthreads[0].history.trajs >= 2):  # if this is True, then the first trajectory is completed!
+            return SubnetworkHotspots.get_next_step(self, thread, allthreads, settings)
         else:
             return 'IDLE'   # need to wait for first simulation to finish before proceeding
 
@@ -343,7 +347,7 @@ class SubnetworkHotspots(Algorithm):
 
         if saturation:
             # Perform RMSD profile analysis
-            rmsd_covar = utilities.covariance_profile(thread, -1, settings)     # -1: operate on most recent trajectory
+            rmsd_covar = utilities.covariance_profile(allthreads[0], 0, settings)     # operate on wild type trajectory
 
             # Calculate subnetworks
             ### KLUDGE KLUDGE KLUDGE ###
@@ -351,7 +355,7 @@ class SubnetworkHotspots(Algorithm):
             # A list of lists of 1-indexed resids constituting each subnetwork
             # This one is intentionally ordered to put the subnetwork containing the catalytic residue first.
             subnetworks = [[399, 188, 47, 45, 361, 394, 266, 53, 181, 49, 185, 71, 379, 52, 50, 67, 70, 54, 180, 360, 177, 182, 64, 178, 363, 69, 51, 362, 260, 56, 261, 418, 48, 365, 367, 357, 72, 44, 41, 176, 368, 391, 392, 393, 184, 395, 396, 397, 265, 414, 311, 55, 61, 263, 262, 398, 42, 46, 369, 304, 358, 282, 66, 364, 359, 415, 416, 417, 68, 419, 420, 421, 413, 179, 43, 307, 57, 366, 422, 63, 58, 412, 62, 65, 390, 183, 73, 39, 40, 74, 308, 400],
-                            [402, 440, 371, 167, 351, 171, 310, 376, 352, 316, 349, 276, 173, 378, 377, 313, 122, 277, 441, 125, 22, 175, 23, 165, 124, 370, 121, 348, 315, 401, 306, 172, 372, 309, 123, 314],
+                            [440, 402, 371, 167, 351, 171, 310, 376, 352, 316, 349, 276, 173, 378, 377, 313, 122, 277, 441, 125, 22, 175, 23, 165, 124, 370, 121, 348, 315, 401, 306, 172, 372, 309, 123, 314],
                             [29, 60, 344, 32, 410, 320, 409, 87, 408, 343, 405, 404, 323, 88, 341, 327, 342, 339, 27, 25, 317, 89, 31, 322, 319, 33, 90, 438, 406, 338, 345, 336, 403, 28, 407, 30, 346, 278, 335, 380, 347, 34, 340, 305, 321, 284, 439, 26, 286, 318, 285],
                             [134, 152, 153, 120, 92, 111, 325, 210, 96, 97, 98, 99, 100, 101, 102, 21, 104, 105, 106, 107, 108, 109, 110, 209, 112, 113, 114, 115, 116, 117, 118, 20, 91, 324, 93, 119, 24, 350, 94, 146, 128, 129, 130, 131, 132, 133, 326, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 127, 147, 148, 149, 150, 151, 95, 103, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 126],
                             [234, 264, 3, 275, 218, 170, 2, 10, 11, 9, 1, 12, 13, 14, 15, 169, 168, 16, 374, 19, 186, 187, 353, 206, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 8, 201, 224, 203, 204, 375, 202, 207, 208, 205, 18, 17, 211, 213, 214, 215, 216, 217, 312, 356, 5, 221, 222, 223, 189, 258, 226, 227, 228, 229, 230, 231, 232, 233, 7, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 225, 166, 4, 212, 174, 219, 220, 259, 354, 267, 268, 269, 270, 271, 272, 373, 274, 273, 200, 6, 355],
