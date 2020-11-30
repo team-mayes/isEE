@@ -3,7 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="79413d0a-9e44-48d3-8905-be180cdeb6bd" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/isee/algorithm.py" afterPath="$PROJECT_DIR$/isee/algorithm.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/isee/utilities.py" afterPath="$PROJECT_DIR$/isee/utilities.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/isee/jobtype.py" afterPath="$PROJECT_DIR$/isee/jobtype.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -30,10 +30,10 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="utilities.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="utilities.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/isee/utilities.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="473">
+            <state relative-caret-position="193">
               <caret line="259" column="40" lean-forward="true" selection-start-line="259" selection-start-column="40" selection-end-line="259" selection-end-column="40" />
               <folding>
                 <element signature="e#182#192#0" expanded="true" />
@@ -57,8 +57,8 @@
       <file leaf-file-name="algorithm.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/isee/algorithm.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="202">
-              <caret line="360" column="57" lean-forward="true" selection-start-line="360" selection-start-column="57" selection-end-line="360" selection-end-column="58" />
+            <state relative-caret-position="193">
+              <caret line="376" column="77" lean-forward="false" selection-start-line="376" selection-start-column="77" selection-end-line="376" selection-end-column="77" />
               <folding>
                 <element signature="e#170#179#0" expanded="true" />
               </folding>
@@ -90,11 +90,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="jobtype.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="jobtype.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/isee/jobtype.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="813">
-              <caret line="359" column="41" lean-forward="false" selection-start-line="359" selection-start-column="41" selection-end-line="359" selection-end-column="41" />
+            <state relative-caret-position="70">
+              <caret line="320" column="91" lean-forward="false" selection-start-line="320" selection-start-column="91" selection-end-line="320" selection-end-column="91" />
               <folding>
                 <element signature="e#164#174#0" expanded="true" />
               </folding>
@@ -137,11 +137,11 @@
       <find>algorithm_history</find>
       <find>self.algorithm_history.muts[</find>
       <find>setBond</find>
-      <find>history.muts</find>
       <find>, 282,</find>
       <find>len(</find>
       <find>&gt;= 2</find>
       <find>min_steps</find>
+      <find>history.muts</find>
       <find>394</find>
     </findStrings>
     <replaceStrings>
@@ -184,10 +184,10 @@
         <option value="$PROJECT_DIR$/isee/infrastructure/taskmanager.py" />
         <option value="$PROJECT_DIR$/isee/test_mutated.pdb" />
         <option value="$PROJECT_DIR$/isee/main.py" />
-        <option value="$PROJECT_DIR$/isee/jobtype.py" />
         <option value="$PROJECT_DIR$/isee/infrastructure/configure.py" />
-        <option value="$PROJECT_DIR$/isee/algorithm.py" />
         <option value="$PROJECT_DIR$/isee/utilities.py" />
+        <option value="$PROJECT_DIR$/isee/algorithm.py" />
+        <option value="$PROJECT_DIR$/isee/jobtype.py" />
       </list>
     </option>
   </component>
@@ -674,12 +674,22 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/isee/infrastructure/configure.py">
+    <entry file="file://$PROJECT_DIR$/isee/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="274">
-          <caret line="73" column="44" lean-forward="true" selection-start-line="73" selection-start-column="44" selection-end-line="73" selection-end-column="44" />
+        <state relative-caret-position="268">
+          <caret line="253" column="32" lean-forward="false" selection-start-line="253" selection-start-column="32" selection-end-line="253" selection-end-column="32" />
           <folding>
-            <element signature="e#82#97#0" expanded="true" />
+            <element signature="e#319#330#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/utilities.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="193">
+          <caret line="259" column="40" lean-forward="true" selection-start-line="259" selection-start-column="40" selection-end-line="259" selection-end-column="40" />
+          <folding>
+            <element signature="e#182#192#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -694,42 +704,32 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/isee/main.py">
+    <entry file="file://$PROJECT_DIR$/isee/infrastructure/configure.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="268">
-          <caret line="253" column="32" lean-forward="false" selection-start-line="253" selection-start-column="32" selection-end-line="253" selection-end-column="32" />
+        <state relative-caret-position="274">
+          <caret line="73" column="44" lean-forward="true" selection-start-line="73" selection-start-column="44" selection-end-line="73" selection-end-column="44" />
           <folding>
-            <element signature="e#319#330#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/jobtype.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="813">
-          <caret line="359" column="41" lean-forward="false" selection-start-line="359" selection-start-column="41" selection-end-line="359" selection-end-column="41" />
-          <folding>
-            <element signature="e#164#174#0" expanded="true" />
+            <element signature="e#82#97#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/isee/algorithm.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="202">
-          <caret line="360" column="57" lean-forward="true" selection-start-line="360" selection-start-column="57" selection-end-line="360" selection-end-column="58" />
+        <state relative-caret-position="193">
+          <caret line="376" column="77" lean-forward="false" selection-start-line="376" selection-start-column="77" selection-end-line="376" selection-end-column="77" />
           <folding>
             <element signature="e#170#179#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/isee/utilities.py">
+    <entry file="file://$PROJECT_DIR$/isee/jobtype.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="473">
-          <caret line="259" column="40" lean-forward="true" selection-start-line="259" selection-start-column="40" selection-end-line="259" selection-end-column="40" />
+        <state relative-caret-position="70">
+          <caret line="320" column="91" lean-forward="false" selection-start-line="320" selection-start-column="91" selection-end-line="320" selection-end-column="91" />
           <folding>
-            <element signature="e#182#192#0" expanded="true" />
+            <element signature="e#164#174#0" expanded="true" />
           </folding>
         </state>
       </provider>

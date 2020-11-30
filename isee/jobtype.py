@@ -318,6 +318,7 @@ class isEE(JobType):
             next_step = this_algorithm.get_next_step(thread, allthreads, settings)
 
         if next_step == 'WT':   # do nothing, correct structure is already set in history.tops and history.inpcrd
+            thread.history.muts.append([])  # empty muts entry, for consistency in indexing
             return False        # False: do not globally terminate
 
         if next_step == 'IDLE':

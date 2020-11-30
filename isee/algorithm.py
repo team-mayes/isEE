@@ -374,7 +374,7 @@ class SubnetworkHotspots(Algorithm):
                     # This will require pairing history.muts and history.score data (can I keep track of score data in algorithm_history?)
                     score_and_muts = []   # full paired set of scores and single mutants across all threads to date
                     for this_thread in allthreads:
-                        for step_index in range(len(this_thread.history.muts)):
+                        for step_index in range(len(this_thread.history.score)):
                             if not len(this_thread.history.muts[step_index]) > 1:   # skip anything not a single mutant
                                 score_and_muts.append([this_thread.history.score[step_index], this_thread.history.muts[step_index]])
                     # Now, prune all mutants who are not the best-scoring at that index
