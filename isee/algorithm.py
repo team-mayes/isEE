@@ -223,7 +223,7 @@ class CovarianceSaturation(Algorithm):
         # if this is the first thread in allthreads and there are no history.trajs objects in any threads yet
         if thread == allthreads[0] and not any([bool(item.history.trajs) for item in allthreads]):
             return 'WT'
-        elif len(allthreads[0].history.trajs >= 2):     # if this is True, then the first trajectory is completed!
+        elif len(allthreads[0].history.trajs) >= 2:     # if this is True, then the first trajectory is completed!
             return CovarianceSaturation.get_next_step(self, thread, allthreads, settings)
         else:
             return 'IDLE'   # need to wait for first simulation to finish before proceeding
@@ -315,7 +315,7 @@ class SubnetworkHotspots(Algorithm):
         # if this is the first thread in allthreads and there are no history.trajs objects in any threads yet
         if thread == allthreads[0] and not any([bool(item.history.trajs) for item in allthreads]):
             return 'WT'
-        elif len(allthreads[0].history.trajs >= 2):  # if this is True, then the first trajectory is completed!
+        elif len(allthreads[0].history.trajs) >= 2:  # if this is True, then the first trajectory is completed!
             return SubnetworkHotspots.get_next_step(self, thread, allthreads, settings)
         else:
             return 'IDLE'   # need to wait for first simulation to finish before proceeding

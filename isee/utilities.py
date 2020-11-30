@@ -253,7 +253,7 @@ def mutate(coords, topology, mutation, name, settings):
 
     ### Mutate
     with open(name + '_mutated.pdb', 'w') as f:
-        patterns = [re.compile('\s+[A-Z0-9]+\s+[A-Z]{3}\s+' + mutant[:-3].upper()) for mutant in mutation]
+        patterns = [re.compile('\s+[A-Z0-9]+\s+[A-Z]{3}\s+' + mutant[:-3] + '\s+') for mutant in mutation]
         for line in open(name + '_prot.pdb', 'r').readlines():
             if not all(pattern.findall(line) == [] for pattern in patterns):
                 pat_index = 0
@@ -310,8 +310,12 @@ def mutate(coords, topology, mutation, name, settings):
     settings.ts_bonds = list(map(list, zip(*settings.ts_bonds)))
     for bond in settings.ts_bonds:
         arg = [str(item) for item in bond]
-        setbond = parmed.tools.actions.setBond(parmed_top, arg[0], arg[1], arg[2], arg[3])
-        setbond.execute()
+        try:
+            setbond = parmed.tools.actions.setBond(parmed_top, arg[0], arg[1], arg[2], arg[3])
+            setbond.execute()
+        except parmed.tools.exceptions.SetParamError as e:
+            raise RuntimeError('encountered parmed.tools.exceptions.SetParamError: ' + e + '\n'
+                               'The offending bond and topology are: ' + str(arg) + ' and ' + mutated_top)
     parmed_top.save(mutated_top, overwrite=True)
 
     settings.ts_bonds = temp_ts_bonds   # todo: k-k-k-kludge
