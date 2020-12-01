@@ -395,6 +395,7 @@ class SubnetworkHotspots(Algorithm):
                     return self.dump_and_return('TER', self.algorithm_history)
 
             # Pick a new mutation in the chosen unmutated subnetwork; reached only if unmutated subnetworks remain
+            next_subnetwork = min([subnet_index for subnet_index in range(len(subnetworks)) if not any([int(mut[0][:-3]) in subnetworks[subnet_index] for mut in self.algorithm_history.muts])])
             subnetwork = subnetworks[next_subnetwork]
             paired = []
             for i in range(len(subnetwork)):
