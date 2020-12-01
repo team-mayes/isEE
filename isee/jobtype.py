@@ -58,7 +58,7 @@ class JobType(abc.ABC):
         Parameters
         ----------
         thread : Thread()
-            The Thread object on which to act
+            The Thread object on which to operate
         settings : argparse.Namespace
             Settings namespace object
 
@@ -82,7 +82,7 @@ class JobType(abc.ABC):
         Parameters
         ----------
         thread : Thread
-            Methods in the JobType abstract base class are intended to operate on Thread objects
+            The Thread object on which to operate
         settings : argparse.Namespace
             Settings namespace object
 
@@ -122,7 +122,7 @@ class JobType(abc.ABC):
         Parameters
         ----------
         thread : Thread
-            Methods in the JobType abstract base class are intended to operate on Thread objects
+            The Thread object on which to operate
 
         Returns
         -------
@@ -155,7 +155,7 @@ class JobType(abc.ABC):
         Parameters
         ----------
         thread : Thread
-            Methods in the JobType abstract base class are intended to operate on Thread objects
+            The Thread object on which to operate
         settings : argparse.Namespace
             Settings namespace object
         kwargs : dict
@@ -177,7 +177,7 @@ class JobType(abc.ABC):
         Parameters
         ----------
         thread : Thread
-            Methods in the JobType abstract base class are intended to operate on Thread objects
+            The Thread object on which to operate
         settings : argparse.Namespace
             Settings namespace object
 
@@ -197,7 +197,7 @@ class JobType(abc.ABC):
         Parameters
         ----------
         thread : Thread
-            Methods in the JobType abstract base class are intended to operate on Thread objects
+            The Thread object on which to operate
         allthreads : list
             A list of all of the thread objects to consider during the algorithm.
         settings : argparse.Namespace
@@ -213,14 +213,16 @@ class JobType(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def gatekeeper(self, thread, settings):
+    def gatekeeper(self, thread, allthreads, settings):
         """
         Return boolean indicating whether job is ready for next interpretation step.
 
         Parameters
         ----------
         thread : Thread
-            Methods in the JobType abstract base class are intended to operate on Thread objects
+            The Thread object on which to operate
+        allthreads : list
+            List of all thread objects to consider
         settings : argparse.Namespace
             Settings namespace object
 
@@ -263,7 +265,7 @@ class isEE(JobType):
         return list_to_return
 
     def get_next_step(self, thread, settings):
-        if thread.history.muts:
+        if thread.history.muts[-1]:
             return '_'.join(thread.history.muts[-1])
         else:
             return 'unmutated'
@@ -354,11 +356,11 @@ class isEE(JobType):
 
         return False    # False: do not terminate
 
-    def gatekeeper(self, thread, settings):
+    def gatekeeper(self, thread, allthreads, settings):
         # first, check whether this thread is intentionally idling and if so, let the algorithm guide us
         if thread.idle:
             this_algorithm = factory.algorithm_factory(settings.algorithm)
-            return this_algorithm.reevaluate_idle(self)
+            return this_algorithm.reevaluate_idle(thread, allthreads)
 
         # if job for this thread has status 'C'ompleted/'C'anceled...
         if thread.get_status(0, settings) == 'C':     # index 0 because there is only ever one element in thread.jobids

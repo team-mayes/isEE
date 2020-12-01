@@ -50,15 +50,18 @@ class Thread(object):
         self.skip_update = False        # used by restart to resubmit jobs as they were rather than doing the next step
         self.idle = False               # flag for idle thread, to facilitate parallelization of algorithms
 
+    # Remember in implementations of Thread methods that 'self' is a thread object, even though they may make calls to
+    # methods of other types of objects (that therefore use 'self' to refer to non-Thread objects)
+
     def process(self, running, settings):
         return process.process(self, running, settings)
 
     def interpret(self, allthreads, running, settings):
         return interpret.interpret(self, allthreads, running, settings)
 
-    def gatekeeper(self, settings):
+    def gatekeeper(self, allthreads, settings):
         jobtype = factory.jobtype_factory(settings.job_type)
-        return jobtype.gatekeeper(self, settings)
+        return jobtype.gatekeeper(self, allthreads, settings)
 
     def get_next_step(self, settings):
         jobtype = factory.jobtype_factory(settings.job_type)
@@ -252,7 +255,7 @@ def main(settings, rescue_running=[]):
     try:
         while (not termination_criterion) and running:
             for thread in running:
-                if thread.gatekeeper(settings):
+                if thread.gatekeeper(allthreads, settings):
                     termination_criterion, running = thread.interpret(allthreads, running, settings)
                     if termination_criterion:   # global termination
                         for thread in running:    # todo: should I replace this with something to finish up running jobs and just block submission of new ones?

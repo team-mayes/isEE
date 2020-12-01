@@ -160,7 +160,7 @@ class Algorithm(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def reevaluate_idle(self, thread):
+    def reevaluate_idle(self, thread, allthreads):
         """
         Determine if the given idle thread is ready to be passed along to the next step or should remain idle. The
         result from this method can be used as a stand-in for the results of a jobtype.gatekeeper implementation when
@@ -170,6 +170,8 @@ class Algorithm(abc.ABC):
         ----------
         thread : Thread()
             Thread object to consider
+        allthreads : list
+            List of all thread objects to consider
 
         Returns
         -------
@@ -206,7 +208,7 @@ class Script(Algorithm):
         except IndexError:  # no untried mutation remains
             return self.dump_and_return('TER', self.algorithm_history)
 
-    def reevaluate_idle(self, thread):
+    def reevaluate_idle(self, thread, allthreads):
         return True    # this algorithm never returns 'IDLE', so it's always ready for the next step
 
 
@@ -288,7 +290,7 @@ class CovarianceSaturation(Algorithm):
             buffer_history(self.algorithm_history)
             return self.dump_and_return(next_mut, self.algorithm_history)
 
-    def reevaluate_idle(self, thread):
+    def reevaluate_idle(self, thread, allthreads):
         # The condition to meet for this algorithm to allow an idle thread to resume is simply that the simulation for
         # the first system (non-mutated) is finished and has had get_next_step called on it
         if os.path.exists('algorithm_history.pkl'):
@@ -350,55 +352,47 @@ class SubnetworkHotspots(Algorithm):
             rmsd_covar = utilities.covariance_profile(allthreads[0], 0, settings)     # operate on wild type trajectory
 
             # Calculate subnetworks
-            ### KLUDGE KLUDGE KLUDGE ###
-            # todo: remove kludge, implement general solution
-            # A list of lists of 1-indexed resids constituting each subnetwork
-            # This one is intentionally ordered to put the subnetwork containing the catalytic residue first.
-            subnetworks = [[399, 188, 47, 45, 361, 394, 266, 53, 181, 49, 185, 71, 379, 52, 50, 67, 70, 54, 180, 360, 177, 182, 64, 178, 363, 69, 51, 362, 260, 56, 261, 418, 48, 365, 367, 357, 72, 44, 41, 176, 368, 391, 392, 393, 184, 395, 396, 397, 265, 414, 311, 55, 61, 263, 262, 398, 42, 46, 369, 304, 358, 282, 66, 364, 359, 415, 416, 417, 68, 419, 420, 421, 413, 179, 43, 307, 57, 366, 422, 63, 58, 412, 62, 65, 390, 183, 73, 39, 40, 74, 308, 400],
-                            [440, 402, 371, 167, 351, 171, 310, 376, 352, 316, 349, 276, 173, 378, 377, 313, 122, 277, 441, 125, 22, 175, 23, 165, 124, 370, 121, 348, 315, 401, 306, 172, 372, 309, 123, 314],
-                            [29, 60, 344, 32, 410, 320, 409, 87, 408, 343, 405, 404, 323, 88, 341, 327, 342, 339, 27, 25, 317, 89, 31, 322, 319, 33, 90, 438, 406, 338, 345, 336, 403, 28, 407, 30, 346, 278, 335, 380, 347, 34, 340, 305, 321, 284, 439, 26, 286, 318, 285],
-                            [134, 152, 153, 120, 92, 111, 325, 210, 96, 97, 98, 99, 100, 101, 102, 21, 104, 105, 106, 107, 108, 109, 110, 209, 112, 113, 114, 115, 116, 117, 118, 20, 91, 324, 93, 119, 24, 350, 94, 146, 128, 129, 130, 131, 132, 133, 326, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 127, 147, 148, 149, 150, 151, 95, 103, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 126],
-                            [234, 264, 3, 275, 218, 170, 2, 10, 11, 9, 1, 12, 13, 14, 15, 169, 168, 16, 374, 19, 186, 187, 353, 206, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 8, 201, 224, 203, 204, 375, 202, 207, 208, 205, 18, 17, 211, 213, 214, 215, 216, 217, 312, 356, 5, 221, 222, 223, 189, 258, 226, 227, 228, 229, 230, 231, 232, 233, 7, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 225, 166, 4, 212, 174, 219, 220, 259, 354, 267, 268, 269, 270, 271, 272, 373, 274, 273, 200, 6, 355],
-                            [435, 434, 384, 38, 430, 427, 431, 426, 287, 288, 383, 300, 436, 293, 78, 280, 291, 386, 299, 298, 297, 333, 303, 81, 84, 82, 387, 388, 334, 85, 295, 79, 425, 76, 294, 83, 80, 292, 385, 301, 289, 296, 75, 411, 283, 279, 37, 302, 437, 328, 329, 86, 331, 59, 35, 428, 433, 332, 337, 389, 424, 432, 290, 382, 77, 281, 330, 423, 429, 381, 36]]
-            ### KLUDGE KLUDGE KLUDGE ###
+            subnetworks = self.get_subnetworks()
 
             # Pick minimum RMSD residue for a subnetwork that hasn't already been done
             already_done = set([int(item[0][:-3]) for item in self.algorithm_history.muts])
 
             # Choose next unmutated subnetwork
-            next_subnetwork = 0
-            while any([item in subnetworks[next_subnetwork] for item in already_done]):     # iterate through subnetworks
-                next_subnetwork += 1
-                if next_subnetwork == len(subnetworks): # no more subnetworks unmutated, so now do combinations
-                    # Need to build a list of lists containing combinations of the most promising single mutants
-                    # This will require pairing history.muts and history.score data (can I keep track of score data in algorithm_history?)
-                    score_and_muts = []   # full paired set of scores and single mutants across all threads to date
-                    for this_thread in allthreads:
-                        for step_index in range(len(this_thread.history.score)):
-                            if not len(this_thread.history.muts[step_index]) > 1:   # skip anything not a single mutant
-                                score_and_muts.append([this_thread.history.score[step_index], this_thread.history.muts[step_index]])
-                    # Now, prune all mutants who are not the best-scoring at that index
-                    score_and_muts = sorted(score_and_muts, key=lambda x: x[1][0])  # sort by mutation
-                    score_and_muts.append([0,['None']])   # kludge to make the coming for loop work properly
-                    this_mut = score_and_muts[0][1][0]
-                    best_index = 0
-                    best_scorers = []   # list of best single mutations at each attempted index
-                    for item_index in range(len(score_and_muts)):
-                        if not score_and_muts[item_index][1][0][:-3] == this_mut[:-3]:
-                            this_mut = score_and_muts[item_index][1][0]
-                            best_scorers.append(score_and_muts[best_index][1][0])
-                            best_index = item_index
-                        if score_and_muts[item_index][0] < score_and_muts[best_index][0]:
-                            best_index = item_index
+            if self.no_unmut_subnets(): # no more subnetworks unmutated, so now do combinations
+                # This needs to not proceed until all the scores for single mutants have been recorded, so begin by
+                # querying reevaluate_idle to see if we need to idle...
+                if not self.reevaluate_idle(thread, allthreads):
+                    return 'IDLE'
 
-                    # Finally, construct list of combinations to attempt, and pick one:
-                    combinations = [list(item) for item in list(itertools.combinations(best_scorers, 2)) if not list(item) in self.algorithm_history.muts]
-                    if combinations:    # if undone combinations remain
-                        self.algorithm_history.muts.append(combinations[0])
-                        buffer_history(self.algorithm_history)
-                        return self.dump_and_return(combinations[0], self.algorithm_history)
-                    else:
-                        return self.dump_and_return('TER', self.algorithm_history)
+                # Need to build a list of lists containing combinations of the most promising single mutants
+                # This will require pairing history.muts and history.score data (can I keep track of score data in algorithm_history?)
+                score_and_muts = []   # full paired set of scores and single mutants across all threads to date
+                for this_thread in allthreads:
+                    for step_index in range(len(this_thread.history.score)):
+                        if not len(this_thread.history.muts[step_index]) > 1:   # skip anything not a single mutant
+                            score_and_muts.append([this_thread.history.score[step_index], this_thread.history.muts[step_index]])
+                # Now, prune all mutants who are not the best-scoring at that index
+                score_and_muts = sorted(score_and_muts, key=lambda x: int(x[1][:-3]))  # sort by mutation index
+                score_and_muts.append([0,['None']])   # kludge to make the coming for loop work properly
+                this_mut = score_and_muts[0][1][0]
+                best_index = 0
+                best_scorers = []   # list of best single mutations at each attempted index
+                for item_index in range(len(score_and_muts)):
+                    if not score_and_muts[item_index][1][0][:-3] == this_mut[:-3]:
+                        this_mut = score_and_muts[item_index][1][0]
+                        best_scorers.append(score_and_muts[best_index][1][0])
+                        best_index = item_index
+                    if score_and_muts[item_index][0] < score_and_muts[best_index][0]:
+                        best_index = item_index
+
+                # Finally, construct list of combinations to attempt, and pick one:
+                combinations = [list(item) for item in list(itertools.combinations(best_scorers, 2)) if not list(item) in self.algorithm_history.muts]
+                if combinations:    # if undone combinations remain
+                    self.algorithm_history.muts.append(combinations[0])
+                    buffer_history(self.algorithm_history)
+                    return self.dump_and_return(combinations[0], self.algorithm_history)
+                else:
+                    return self.dump_and_return('TER', self.algorithm_history)
 
             # Pick a new mutation in the chosen unmutated subnetwork; reached only if unmutated subnetworks remain
             subnetwork = subnetworks[next_subnetwork]
@@ -436,17 +430,61 @@ class SubnetworkHotspots(Algorithm):
             buffer_history(self.algorithm_history)
             return self.dump_and_return(next_mut, self.algorithm_history)
 
-    def reevaluate_idle(self, thread):
-        # The condition to meet for this algorithm to allow an idle thread to resume is simply that the simulation for
-        # the first system (non-mutated) is finished and has had get_next_step called on it
+    def reevaluate_idle(self, thread, allthreads):
+        # The first condition to meet for this algorithm to allow an idle thread to resume is simply that the simulation
+        # for the first system (non-mutated) is finished and has had get_next_step called on it
         if os.path.exists('algorithm_history.pkl'):
             algorithm_history = pickle.load(open('algorithm_history.pkl', 'rb'))
             if algorithm_history.muts:
+                # The second condition is that, if and only if there are no unmutated subnetworks, there must be a
+                # recorded score for each one
+                if self.no_unmut_subnets():
+                    if len(list(itertools.chain.from_iterable([this_thread.history.score for this_thread in allthreads]))) == len(list(itertools.chain.from_iterable([this_thread.history.muts for this_thread in allthreads]))):
+                        return True
+                    else:
+                        return False
                 return True
             else:
                 return False
         else:
             return False
+
+    def no_unmut_subnets(self):
+        # Determine from algorithm_history whether there are any subnetworks not containing at least one single mutant
+        subnetworks = self.get_subnetworks()
+        if len(self.algorithm_history.muts) >= len(subnetworks):    # todo: should/can I do better than this?
+            return True
+        else:
+            return False
+
+    def get_subnetworks(self):
+        ### KLUDGE KLUDGE KLUDGE ###
+        # todo: remove kludge, implement general solution
+        # A list of lists of 1-indexed resids constituting each subnetwork
+        # This one is intentionally ordered to put the subnetwork containing the catalytic residue first.
+        return [[399, 188, 47, 45, 361, 394, 266, 53, 181, 49, 185, 71, 379, 52, 50, 67, 70, 54, 180, 360, 177, 182, 64, 178,
+          363, 69, 51, 362, 260, 56, 261, 418, 48, 365, 367, 357, 72, 44, 41, 176, 368, 391, 392, 393, 184, 395, 396,
+          397, 265, 414, 311, 55, 61, 263, 262, 398, 42, 46, 369, 304, 358, 282, 66, 364, 359, 415, 416, 417, 68, 419,
+          420, 421, 413, 179, 43, 307, 57, 366, 422, 63, 58, 412, 62, 65, 390, 183, 73, 39, 40, 74, 308, 400],
+         [440, 402, 371, 167, 351, 171, 310, 376, 352, 316, 349, 276, 173, 378, 377, 313, 122, 277, 441, 125, 22, 175,
+          23, 165, 124, 370, 121, 348, 315, 401, 306, 172, 372, 309, 123, 314],
+         [29, 60, 344, 32, 410, 320, 409, 87, 408, 343, 405, 404, 323, 88, 341, 327, 342, 339, 27, 25, 317, 89, 31, 322,
+          319, 33, 90, 438, 406, 338, 345, 336, 403, 28, 407, 30, 346, 278, 335, 380, 347, 34, 340, 305, 321, 284, 439,
+          26, 286, 318, 285],
+         [134, 152, 153, 120, 92, 111, 325, 210, 96, 97, 98, 99, 100, 101, 102, 21, 104, 105, 106, 107, 108, 109, 110,
+          209, 112, 113, 114, 115, 116, 117, 118, 20, 91, 324, 93, 119, 24, 350, 94, 146, 128, 129, 130, 131, 132, 133,
+          326, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 127, 147, 148, 149, 150, 151, 95, 103, 154, 155,
+          156, 157, 158, 159, 160, 161, 162, 163, 164, 126],
+         [234, 264, 3, 275, 218, 170, 2, 10, 11, 9, 1, 12, 13, 14, 15, 169, 168, 16, 374, 19, 186, 187, 353, 206, 190,
+          191, 192, 193, 194, 195, 196, 197, 198, 199, 8, 201, 224, 203, 204, 375, 202, 207, 208, 205, 18, 17, 211, 213,
+          214, 215, 216, 217, 312, 356, 5, 221, 222, 223, 189, 258, 226, 227, 228, 229, 230, 231, 232, 233, 7, 235, 236,
+          237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 225,
+          166, 4, 212, 174, 219, 220, 259, 354, 267, 268, 269, 270, 271, 272, 373, 274, 273, 200, 6, 355],
+         [435, 434, 384, 38, 430, 427, 431, 426, 287, 288, 383, 300, 436, 293, 78, 280, 291, 386, 299, 298, 297, 333,
+          303, 81, 84, 82, 387, 388, 334, 85, 295, 79, 425, 76, 294, 83, 80, 292, 385, 301, 289, 296, 75, 411, 283, 279,
+          37, 302, 437, 328, 329, 86, 331, 59, 35, 428, 433, 332, 337, 389, 424, 432, 290, 382, 77, 281, 330, 423, 429,
+          381, 36]]
+        ### KLUDGE KLUDGE KLUDGE ###
 
 
 if __name__ == '__main__':
