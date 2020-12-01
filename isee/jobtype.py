@@ -357,12 +357,16 @@ class isEE(JobType):
         return False    # False: do not terminate
 
     def gatekeeper(self, thread, allthreads, settings):
-        # first, check whether this thread is intentionally idling and if so, let the algorithm guide us
+        # First, check whether this thread is intentionally idling and if so, let the algorithm guide us
         if thread.idle:
+            # We should be sure at this point that something hasn't gone wrong and idled ALL the threads...
+            if all([this_thread.idle for this_thread in allthreads]):
+                raise RuntimeError('all threads are in an idle state, which means something must have gone wrong. '
+                                   'Inspect the restart.pkl file for errors.')
             this_algorithm = factory.algorithm_factory(settings.algorithm)
             return this_algorithm.reevaluate_idle(thread, allthreads)
 
-        # if job for this thread has status 'C'ompleted/'C'anceled...
+        # If job for this thread has status 'C'ompleted/'C'anceled...
         if thread.get_status(0, settings) == 'C':     # index 0 because there is only ever one element in thread.jobids
             return True
         else:
