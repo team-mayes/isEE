@@ -63,7 +63,7 @@ def configure(input_file, user_working_directory=''):
 
         # Settings for isEE jobtype
         degeneracy: int = 0
-        initial_coordinates: typing.List[str] = ['']
+        initial_coordinates: typing.List[str] = ['']    # todo: in isEE as currently written, each thread has to have the same initial coordinates, so either change that or change this
         ts_bonds: typing.Tuple[typing.List[str], typing.List[str], typing.List[float], typing.List[float]] = [[''],[''],[-1],[-1]]
         min_steps: int = 5000
 

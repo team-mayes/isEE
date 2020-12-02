@@ -336,11 +336,9 @@ class isEE(JobType):
         # Else, we have a new mutant to direct the thread to build and simulate
         thread.history.muts.append(next_step)
 
-        # Get index of previous step to use as base for next step
-        base_index = 0  # for now we'll just use the original input structure
-
         # Perform desired mutation
-        new_inpcrd, new_top = utilities.mutate(thread.history.inpcrd[base_index], thread.history.tops[base_index], next_step, thread.history.inpcrd[base_index] + '_' + '_'.join(next_step), settings)
+        # todo: implement possibility of mutating using something other than initial coordinates/topology as a base?
+        new_inpcrd, new_top = utilities.mutate(settings.initial_coordinates[0], settings.init_topology, next_step, thread.history.inpcrd[base_index] + '_' + '_'.join(next_step), settings)
 
         # Update history and return
         thread.history.inpcrd.append(new_inpcrd)
