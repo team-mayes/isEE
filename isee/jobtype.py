@@ -338,7 +338,7 @@ class isEE(JobType):
 
         # Perform desired mutation
         # todo: implement possibility of mutating using something other than initial coordinates/topology as a base?
-        new_inpcrd, new_top = utilities.mutate(settings.initial_coordinates[0], settings.init_topology, next_step, thread.history.inpcrd[base_index] + '_' + '_'.join(next_step), settings)
+        new_inpcrd, new_top = utilities.mutate(settings.initial_coordinates[0], settings.init_topology, next_step, settings.initial_coordinates[0] + '_' + '_'.join(next_step), settings)
 
         # Update history and return
         thread.history.inpcrd.append(new_inpcrd)
