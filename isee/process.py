@@ -95,6 +95,11 @@ def process(thread, running, settings):
     for file in batchfiles:
         thread.jobids.append(taskmanager.submit_batch(file, settings))
 
+    # Dump restart.pkl with updates from process
+    pickle.dump(allthreads, open('restart.pkl.bak', 'wb'))  # if the code crashes while dumping it could delete the contents of the pkl file
+    if not os.path.getsize('restart.pkl.bak') == 0:
+        shutil.copy('restart.pkl.bak', 'restart.pkl')       # copying after is safer
+
     if thread not in running:
         running.append(thread)
     return running

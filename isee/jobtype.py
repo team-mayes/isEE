@@ -340,7 +340,7 @@ class isEE(JobType):
         # todo: implement possibility of mutating using something other than initial coordinates/topology as a base?
         if '/' in settings.init_topology:   # todo: this shouldn't be necessary because it should already be done in main.init_threads, but apparently it's still necessary?
             settings.init_topology = settings.init_topology[settings.init_topology.rindex('/') + 1:]
-        new_inpcrd, new_top = utilities.mutate(settings.initial_coordinates[0], settings.init_topology, next_step, thread.history.inpcrd[base_index] + '_' + '_'.join(next_step), settings)
+        new_inpcrd, new_top = utilities.mutate(settings.initial_coordinates[0], settings.init_topology, next_step, settings.initial_coordinates[0] + '_' + '_'.join(next_step), settings)
 
         # Update history and return
         thread.history.inpcrd.append(new_inpcrd)
@@ -364,7 +364,10 @@ class isEE(JobType):
                 raise RuntimeError('all threads are in an idle state, which means something must have gone wrong. '
                                    'Inspect the restart.pkl file for errors.')
             this_algorithm = factory.algorithm_factory(settings.algorithm)
-            return this_algorithm.reevaluate_idle(thread, allthreads)
+            result = this_algorithm.reevaluate_idle(thread, allthreads)
+            if result:
+                thread.idle = False
+            return result
 
         # If job for this thread has status 'C'ompleted/'C'anceled...
         if thread.get_status(0, settings) == 'C':     # index 0 because there is only ever one element in thread.jobids
