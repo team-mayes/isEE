@@ -364,10 +364,7 @@ class isEE(JobType):
                 raise RuntimeError('all threads are in an idle state, which means something must have gone wrong. '
                                    'Inspect the restart.pkl file for errors.')
             this_algorithm = factory.algorithm_factory(settings.algorithm)
-            result = this_algorithm.reevaluate_idle(thread, allthreads)
-            if result:
-                thread.idle = False
-            return result
+            return this_algorithm.reevaluate_idle(thread, allthreads)
 
         # If job for this thread has status 'C'ompleted/'C'anceled...
         if thread.get_status(0, settings) == 'C':     # index 0 because there is only ever one element in thread.jobids
