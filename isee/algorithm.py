@@ -373,14 +373,14 @@ class SubnetworkHotspots(Algorithm):
                             score_and_muts.append([this_thread.history.score[step_index], this_thread.history.muts[step_index][0]])
                 # Now, prune all mutants who are not the best-scoring at that index
                 score_and_muts = sorted(score_and_muts, key=lambda x: int(x[1][:-3]))  # sort by mutation index
-                score_and_muts.append([0,['None']])   # kludge to make the coming for loop work properly
-                this_mut = score_and_muts[0][1][0]
+                score_and_muts.append([0,'None'])   # kludge to make the coming for loop work properly
+                this_mut = score_and_muts[0][1]
                 best_index = 0
                 best_scorers = []   # list of best single mutations at each attempted index
                 for item_index in range(len(score_and_muts)):
-                    if not score_and_muts[item_index][1][0][:-3] == this_mut[:-3]:
+                    if not score_and_muts[item_index][1][:-3] == this_mut[:-3]:
                         this_mut = score_and_muts[item_index][1][0]
-                        best_scorers.append(score_and_muts[best_index][1][0])
+                        best_scorers.append(score_and_muts[best_index][1])
                         best_index = item_index
                     if score_and_muts[item_index][0] < score_and_muts[best_index][0]:
                         best_index = item_index
@@ -453,7 +453,7 @@ class SubnetworkHotspots(Algorithm):
     def no_unmut_subnets(self):
         # Determine from algorithm_history whether there are any subnetworks not containing at least one single mutant
         subnetworks = self.get_subnetworks()
-        if len(self.algorithm_history.muts) > len(subnetworks):    # > b/c of wt # todo: should/can I do better than this?
+        if len(self.algorithm_history.muts) >= len(subnetworks):    # todo: should/can I do better than this?
             return True
         else:
             return False
