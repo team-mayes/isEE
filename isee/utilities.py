@@ -99,16 +99,23 @@ def lie(trajectory, topology, settings):
     traj = pytraj.iterload(trajectory, topology)
 
     # Compute LIE
-    EEL = []
-    VDW = []
-    update_progress(0, 'LIE')
-    i = 0
-    for frame in range(traj.n_frames):  # todo: this can take a very long time. What is the appropriate spacing between frames?
-        lie_temp = pytraj.energy_analysis.lie(traj, mask=settings.ts_mask, frame_indices=[frame])
-        EEL = numpy.append(EEL, lie_temp['LIE[EELEC]'])
-        VDW = numpy.append(VDW, lie_temp['LIE[EVDW]'])
-        i += 1
-        update_progress(i / traj.n_frames, 'LIE')
+    lie_temp = pytraj.energy_analysis.lie(traj, mask=settings.ts_mask, frame_indices=[frame])
+    EEL = lie_temp['LIE[EELEC]']
+    VDW = lie_temp['LIE[EVDW]']
+
+    ## Deprecated version. Pytraj has a bug where there's a limit of ~500 calls to pytraj.energy_analysis.lie before it
+    ## crashes; there's a workaround on GitHub here, supposedly:
+    ## https://github.com/Amber-MD/pytraj/issues/1498#issuecomment-558360392
+    # EEL = []
+    # VDW = []
+    # update_progress(0, 'LIE')
+    # i = 0
+    # for frame in range(traj.n_frames):  # todo: this can take a very long time. What is the appropriate spacing between frames?
+    #     lie_temp = pytraj.energy_analysis.lie(traj, mask=settings.ts_mask, frame_indices=[frame])
+    #     EEL = numpy.append(EEL, lie_temp['LIE[EELEC]'])
+    #     VDW = numpy.append(VDW, lie_temp['LIE[EVDW]'])
+    #     i += 1
+    #     update_progress(i / traj.n_frames, 'LIE')
 
     return settings.lie_alpha * numpy.mean(VDW) + settings.lie_beta * numpy.mean(EEL)
 
