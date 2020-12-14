@@ -453,7 +453,7 @@ class SubnetworkHotspots(Algorithm):
     def no_unmut_subnets(self):
         # Determine from algorithm_history whether there are any subnetworks not containing at least one single mutant
         subnetworks = self.get_subnetworks()
-        if len(self.algorithm_history.muts) >= len(subnetworks):    # todo: should/can I do better than this?
+        if len(set([item[0][:-3] for item in self.algorithm_history.muts])) >= len(subnetworks):    # todo: should/can I do better than this?
             return True
         else:
             return False
