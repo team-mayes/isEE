@@ -78,6 +78,9 @@ def configure(input_file, user_working_directory=''):
         lie_alpha: float = 0.18
         lie_beta: float = 0.33
 
+        # Other
+        restart_terminated_threads: bool = True
+
         # Custom Amber force fields, if required
         paths_to_forcefields: typing.List[str] = ['']
 
