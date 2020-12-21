@@ -104,18 +104,21 @@ class Algorithm(abc.ABC):
 
             algorithm_history.__dict__[key] = append_lists(current, [thread.history.__dict__[key] for thread in allthreads])
 
-        dump_and_return(None, algorithm_history)    # dump to pickle file # todo: deprecate dump_and_return?
-
-        return algorithm_history
-
-    @staticmethod
-    def dump_and_return(to_return, algorithm_history):
-        # Helper function to dump pickle before returning
+        # Dump pickle file
         pickle.dump(algorithm_history, open('algorithm_history.pkl.bak', 'wb'))
         if not os.path.getsize('algorithm_history.pkl.bak') == 0:
             shutil.copy('algorithm_history.pkl.bak', 'algorithm_history.pkl')  # copying after is safer
 
-        return to_return
+        return algorithm_history
+
+    # @staticmethod
+    # def dump_and_return(to_return, algorithm_history):
+    #     # Helper function to dump pickle before returning
+    #     pickle.dump(algorithm_history, open('algorithm_history.pkl.bak', 'wb'))
+    #     if not os.path.getsize('algorithm_history.pkl.bak') == 0:
+    #         shutil.copy('algorithm_history.pkl.bak', 'algorithm_history.pkl')  # copying after is safer
+    #
+    #     return to_return
 
     @abc.abstractmethod
     def get_first_step(self, thread, allthreads, settings):
@@ -460,7 +463,7 @@ class SubnetworkHotspots(Algorithm):
     def reevaluate_idle(self, thread, allthreads):
         # The first condition to meet for this algorithm to allow an idle thread to resume is simply that the simulation
         # for the first system (non-mutated) is finished and has had get_next_step called on it
-        algorithm_history = self.self.build_algorithm_history(allthreads)
+        algorithm_history = self.build_algorithm_history(allthreads)
 
         if os.path.exists('algorithm_history.pkl'):
             algorithm_history = pickle.load(open('algorithm_history.pkl', 'rb'))
