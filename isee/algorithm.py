@@ -393,7 +393,7 @@ class SubnetworkHotspots(Algorithm):
             already_done = set([int(item[0][:-3]) for item in algorithm_history.muts])
 
             # Choose next unmutated subnetwork
-            if self.no_unmut_subnets(): # no more subnetworks unmutated, so now do combinations
+            if self.no_unmut_subnets(allthreads): # no more subnetworks unmutated, so now do combinations
                 # This needs to not proceed until all the scores for single mutants have been recorded, so begin by
                 # querying reevaluate_idle to see if we need to idle...
                 if not self.reevaluate_idle(thread, allthreads):
@@ -470,7 +470,7 @@ class SubnetworkHotspots(Algorithm):
             if algorithm_history.muts:
                 # The second condition is that, if and only if there are no unmutated subnetworks, there must be a
                 # recorded score for each one
-                if self.no_unmut_subnets():
+                if self.no_unmut_subnets(allthreads):
                     if len(list(itertools.chain.from_iterable([this_thread.history.score for this_thread in allthreads]))) == len(list(itertools.chain.from_iterable([this_thread.history.muts for this_thread in allthreads]))):
                         return True
                     else:
@@ -481,7 +481,7 @@ class SubnetworkHotspots(Algorithm):
         else:
             return False
 
-    def no_unmut_subnets(self):
+    def no_unmut_subnets(self, allthreads):
         # Determine from algorithm_history whether there are any subnetworks not containing at least one single mutant
         algorithm_history = self.build_algorithm_history(allthreads)
 

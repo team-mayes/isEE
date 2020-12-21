@@ -56,8 +56,8 @@
       <file leaf-file-name="algorithm.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/isee/algorithm.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="108">
-              <caret line="113" column="19" lean-forward="true" selection-start-line="113" selection-start-column="19" selection-end-line="113" selection-end-column="19" />
+            <state relative-caret-position="123">
+              <caret line="483" column="14" lean-forward="false" selection-start-line="483" selection-start-column="8" selection-end-line="483" selection-end-column="14" />
               <folding>
                 <element signature="e#170#179#0" expanded="true" />
               </folding>
@@ -110,7 +110,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>get_initi</find>
       <find>get_bac</find>
       <find>update</find>
       <find>jobtype.</find>
@@ -140,6 +139,7 @@
       <find>base_ind</find>
       <find>build_algorithm_history</find>
       <find>dump_and_return</find>
+      <find>no_unm</find>
     </findStrings>
     <replaceStrings>
       <replace>isee</replace>
@@ -735,8 +735,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/isee/algorithm.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="108">
-          <caret line="113" column="19" lean-forward="true" selection-start-line="113" selection-start-column="19" selection-end-line="113" selection-end-column="19" />
+        <state relative-caret-position="123">
+          <caret line="483" column="14" lean-forward="false" selection-start-line="483" selection-start-column="8" selection-end-line="483" selection-end-column="14" />
           <folding>
             <element signature="e#170#179#0" expanded="true" />
           </folding>
