@@ -16,50 +16,51 @@ import subprocess
 from isee.infrastructure import factory
 from isee import utilities
 
-def buffer_history(algorithm_history):
-    """
-    Add properly typed placeholder entries to the end of each attribute of algorithm_history in order to keep each
-    attribute of the same length.
-
-    All attributes of a properly formatted algorithm_history object are lists, where a given index across any such list
-    contains corresponding information. This function simply appends blank placeholder entries to lists that are too
-    short, to facilitate cleanly maintaining this feature even when not every list in the object is ready to be updated.
-
-    If the type is not recognized, None is used instead. None is also used where the list contains ints, floats, or
-    bools, as using zero or False in this case is more likely to be accidentally misinterpreted as data instead of as
-    the absence thereof, as intended.
-
-    Parameters
-    ----------
-    algorithm_history : argparse.Namespace
-        The object on which to act
-
-    Returns
-    -------
-    None
-
-    """
-
-    # Identify the length of the longest list
-    max_len = max([len(item) for item in [algorithm_history.__getattribute__(att) for att in algorithm_history.__dict__.keys()]])
-
-    # Now append the appropriate placeholders where needed
-    for attribute in algorithm_history.__dict__.keys():
-        try:
-            this_type = type(algorithm_history.__getattribute__(attribute)[0])   # type of 0th object in attribute
-        except IndexError:  # empty list, no types available
-            this_type = type(None)
-
-        to_append = None
-        # iterate through objects of various types that evaluate with bool() to False
-        # we exclude int, float, and bool examples because these should use None regardless
-        for potential_type in ['', None, [], (), {}]:
-            if this_type == type(potential_type):
-                to_append = potential_type
-                break
-
-        while len(algorithm_history.__getattribute__(attribute)) < max_len:
-            algorithm_history.__getattribute__(attribute).append(to_append)
+## Deprecated
+# def buffer_history(algorithm_history):
+#     """
+#     Add properly typed placeholder entries to the end of each attribute of algorithm_history in order to keep each
+#     attribute of the same length.
+#
+#     All attributes of a properly formatted algorithm_history object are lists, where a given index across any such list
+#     contains corresponding information. This function simply appends blank placeholder entries to lists that are too
+#     short, to facilitate cleanly maintaining this feature even when not every list in the object is ready to be updated.
+#
+#     If the type is not recognized, None is used instead. None is also used where the list contains ints, floats, or
+#     bools, as using zero or False in this case is more likely to be accidentally misinterpreted as data instead of as
+#     the absence thereof, as intended.
+#
+#     Parameters
+#     ----------
+#     algorithm_history : argparse.Namespace
+#         The object on which to act
+#
+#     Returns
+#     -------
+#     None
+#
+#     """
+#
+#     # Identify the length of the longest list
+#     max_len = max([len(item) for item in [algorithm_history.__getattribute__(att) for att in algorithm_history.__dict__.keys()]])
+#
+#     # Now append the appropriate placeholders where needed
+#     for attribute in algorithm_history.__dict__.keys():
+#         try:
+#             this_type = type(algorithm_history.__getattribute__(attribute)[0])   # type of 0th object in attribute
+#         except IndexError:  # empty list, no types available
+#             this_type = type(None)
+#
+#         to_append = None
+#         # iterate through objects of various types that evaluate with bool() to False
+#         # we exclude int, float, and bool examples because these should use None regardless
+#         for potential_type in ['', None, [], (), {}]:
+#             if this_type == type(potential_type):
+#                 to_append = potential_type
+#                 break
+#
+#         while len(algorithm_history.__getattribute__(attribute)) < max_len:
+#             algorithm_history.__getattribute__(attribute).append(to_append)
 
 
 class Algorithm(abc.ABC):
@@ -71,12 +72,41 @@ class Algorithm(abc.ABC):
     """
 
     def __init__(self):
-        ### Load algorithm_history from algorithm_history.pkl ###
-        if os.path.exists('algorithm_history.pkl'):
-            self.algorithm_history = pickle.load(open('algorithm_history.pkl', 'rb'))
-        else:
-            raise FileNotFoundError('algorithm_history.pkl not found; it should have been created when the first '
-                                    'thread was initialized. Did you do something unusual?')
+        pass
+
+        ## Deprecated
+        # ### Load algorithm_history from algorithm_history.pkl ###
+        # if os.path.exists('algorithm_history.pkl'):
+        #     self.algorithm_history = pickle.load(open('algorithm_history.pkl', 'rb'))
+        # else:
+        #     raise FileNotFoundError('algorithm_history.pkl not found; it should have been created when the first '
+        #                             'thread was initialized. Did you do something unusual?')
+
+    @staticmethod
+    def build_algorithm_history(allthreads):
+        # Build algorithm_history afresh from all thread history attributes
+        algorithm_history = argparse.Namespace()
+
+        def append_lists(to_append_to, list_of_lists):
+            # Helper function that combines lists: [-1,0], [[1,2,3],[4,5,6]] --> [-1,0,1,2,3,4,5,6]
+            temp = to_append_to
+            for item in list_of_lists:
+                for subitem in item:
+                    temp.append(subitem)
+            return temp
+
+        for key in list(allthreads[0].history.__dict__.keys()):
+            try:
+                current = algorithm_history.__dict__[key]
+            except KeyError:
+                current = []
+                algorithm_history.__dict__[key] = current
+
+            algorithm_history.__dict__[key] = append_lists(current, [thread.history.__dict__[key] for thread in allthreads])
+
+        dump_and_return(None, algorithm_history)    # dump to pickle file # todo: deprecate dump_and_return?
+
+        return algorithm_history
 
     @staticmethod
     def dump_and_return(to_return, algorithm_history):
@@ -200,13 +230,13 @@ class Script(Algorithm):
             return Script.get_next_step(self, thread, allthreads, settings)
 
     def get_next_step(self, thread, allthreads, settings):
-        untried = [item for item in settings.mutation_script if not item in self.algorithm_history.muts]
+        algorithm_history = build_algorithm_history(allthreads)
+
+        untried = [item for item in settings.mutation_script if not item in algorithm_history.muts]
         try:
-            self.algorithm_history.muts.append([untried[0]])
-            buffer_history(self.algorithm_history)
-            return self.dump_and_return([untried[0]], self.algorithm_history)   # first untried mutation
+            return [untried[0]]     # first untried mutation
         except IndexError:  # no untried mutation remains
-            return self.dump_and_return('TER', self.algorithm_history)
+            return 'TER'
 
     def reevaluate_idle(self, thread, allthreads):
         return True    # this algorithm never returns 'IDLE', so it's always ready for the next step
@@ -231,18 +261,20 @@ class CovarianceSaturation(Algorithm):
             return 'IDLE'   # need to wait for first simulation to finish before proceeding
 
     def get_next_step(self, thread, allthreads, settings):
+        algorithm_history = build_algorithm_history(allthreads)
+
         all_resnames = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA', 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP']
 
-        if self.algorithm_history.muts == []:   # first ever mutation
+        if algorithm_history.muts == []:   # first ever mutation
             saturation = True   # saturation = True means: pick a new residue to mutate
 
         # Otherwise, saturation is defined by having tried all the residues in all_resnames (excluding the wild type)
         # elif (the last (len(all_resnames) - 1) mutation resnames are all unique) and\
         #   (all of the last (len(all_resnames) - 1) mutation resnames are in all_resnames) and\
         #   (all of the last (len(all_resnames) - 1) mutation resids are equal to the last resid):
-        elif len(set([item[0][-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]])) == (len(all_resnames) - 1) and\
-                set([item[0][-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames))\
-                and all([item[0][:-3] == self.algorithm_history.muts[-1][0][:-3] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]):
+        elif len(set([item[0][-3:] for item in algorithm_history.muts[-1 * (len(all_resnames) - 1):]])) == (len(all_resnames) - 1) and\
+                set([item[0][-3:] for item in algorithm_history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames))\
+                and all([item[0][:-3] == algorithm_history.muts[-1][0][:-3] for item in algorithm_history.muts[-1 * (len(all_resnames) - 1):]]):
             saturation = True
 
         else:
@@ -253,7 +285,7 @@ class CovarianceSaturation(Algorithm):
             rmsd_covar = utilities.covariance_profile(allthreads[0], 0, settings)  # operate on wild type trajectory
 
             # Pick minimum RMSD residue that hasn't already been done
-            already_done = set([int(item[:-3]) for item in self.algorithm_history.muts] + [settings.covariance_reference_resid])
+            already_done = set([int(item[:-3]) for item in algorithm_history.muts] + [settings.covariance_reference_resid])
             paired = []
             i = 0
             for value in rmsd_covar:
@@ -266,33 +298,31 @@ class CovarianceSaturation(Algorithm):
                 resid = paired[this_index][0]
                 this_index += 1
                 if this_index >= len(paired):    # if there are no more residues to mutate
-                    return self.dump_and_return('TER', self.algorithm_history)
+                    return 'TER'
 
             next_mut = [str(int(resid)) + all_resnames[0]]
 
-            self.algorithm_history.muts.append(next_mut)
-            buffer_history(self.algorithm_history)
-            return self.dump_and_return(next_mut, self.algorithm_history)
+            return next_mut
         else:   # unsaturated, so pick an unused mutation on the same residue as the previous mutation
             # First, we need to generate a list of all the mutations that haven't been tried yet on this residue
-            done = [item[0][-3:] for item in self.algorithm_history.muts if item[:-3] == self.algorithm_history.muts[-1][0][:-3]]
+            done = [item[0][-3:] for item in algorithm_history.muts if item[:-3] == algorithm_history.muts[-1][0][:-3]]
             todo = [item for item in all_resnames if not item in done]
 
             # Then, remove the wild type residue name from the list
             mtop = mdtraj.load_prmtop(thread.history.tops[0])   # 0th topology corresponds to the "wild type" here
-            wt = mtop.residue(int(self.algorithm_history.muts[-1][0][:-3]) - 1)  # mdtraj topology is zero-indexed, so -1
+            wt = mtop.residue(int(algorithm_history.muts[-1][0][:-3]) - 1)  # mdtraj topology is zero-indexed, so -1
             if str(wt)[:3] in todo:
                 todo.remove(str(wt)[:3])   # wt is formatted as <three letter code><zero-indexed resid>
 
-            next_mut = [self.algorithm_history.muts[-1][0][:-3] + todo[0]]
+            next_mut = [algorithm_history.muts[-1][0][:-3] + todo[0]]
 
-            self.algorithm_history.muts.append(next_mut)
-            buffer_history(self.algorithm_history)
-            return self.dump_and_return(next_mut, self.algorithm_history)
+            return next_mut
 
     def reevaluate_idle(self, thread, allthreads):
         # The condition to meet for this algorithm to allow an idle thread to resume is simply that the simulation for
         # the first system (non-mutated) is finished and has had get_next_step called on it
+        algorithm_history = build_algorithm_history(allthreads)
+
         if os.path.exists('algorithm_history.pkl'):
             algorithm_history = pickle.load(open('algorithm_history.pkl', 'rb'))
             if algorithm_history.muts:
@@ -323,25 +353,27 @@ class SubnetworkHotspots(Algorithm):
             return 'IDLE'   # need to wait for first simulation to finish before proceeding
 
     def get_next_step(self, thread, allthreads, settings):
+        algorithm_history = build_algorithm_history(allthreads)
+
         if not settings.TEST:
             all_resnames = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA', 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP']
         else:   # much-truncated list to skip much of the busywork, for testing purposes
             all_resnames = ['ALA', 'GLY']
 
-        if self.algorithm_history.muts == []:   # first ever mutation
+        if algorithm_history.muts == []:   # first ever mutation
             saturation = True   # saturation = True means: pick a new residue to mutate
 
         # Otherwise, saturation is defined by having tried all the residues in all_resnames (excluding the wild type)
         # elif (the last (len(all_resnames) - 1) mutation resnames are all unique) and\
         #   (all of the last (len(all_resnames) - 1) mutation resnames are in all_resnames) and\
         #   (all of the last (len(all_resnames) - 1) mutation resids are equal to the last resid):
-        elif len(set([item[0][-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]])) == (len(all_resnames) - 1) and\
-                set([item[0][-3:] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames)) and\
-                all([item[0][:-3] == self.algorithm_history.muts[-1][0][:-3] for item in self.algorithm_history.muts[-1 * (len(all_resnames) - 1):]]):
+        elif len(set([item[0][-3:] for item in algorithm_history.muts[-1 * (len(all_resnames) - 1):]])) == (len(all_resnames) - 1) and\
+                set([item[0][-3:] for item in algorithm_history.muts[-1 * (len(all_resnames) - 1):]]).issubset(set(all_resnames)) and\
+                all([item[0][:-3] == algorithm_history.muts[-1][0][:-3] for item in algorithm_history.muts[-1 * (len(all_resnames) - 1):]]):
             saturation = True
 
         # Alternatively, if there are any double or higher mutants in the algorithm history, consider it saturated
-        elif any([len(item) > 1 for item in self.algorithm_history.muts]):
+        elif any([len(item) > 1 for item in algorithm_history.muts]):
             saturation = True
 
         else:
@@ -355,7 +387,7 @@ class SubnetworkHotspots(Algorithm):
             subnetworks = self.get_subnetworks()
 
             # Pick minimum RMSD residue for a subnetwork that hasn't already been done
-            already_done = set([int(item[0][:-3]) for item in self.algorithm_history.muts])
+            already_done = set([int(item[0][:-3]) for item in algorithm_history.muts])
 
             # Choose next unmutated subnetwork
             if self.no_unmut_subnets(): # no more subnetworks unmutated, so now do combinations
@@ -388,11 +420,9 @@ class SubnetworkHotspots(Algorithm):
                 # Finally, construct list of combinations to attempt, and pick one:
                 combinations = [list(item) for item in list(itertools.combinations(best_scorers, 2)) if not list(item) in self.algorithm_history.muts]
                 if combinations:    # if undone combinations remain
-                    self.algorithm_history.muts.append(combinations[0])
-                    buffer_history(self.algorithm_history)
-                    return self.dump_and_return(combinations[0], self.algorithm_history)
+                    return combinations[0]
                 else:
-                    return self.dump_and_return('TER', self.algorithm_history)
+                    return 'TER'
 
             # Pick a new mutation in the chosen unmutated subnetwork; reached only if unmutated subnetworks remain
             next_subnetwork = min([subnet_index for subnet_index in range(len(subnetworks)) if not any([int(mut[0][:-3]) in subnetworks[subnet_index] for mut in self.algorithm_history.muts])])
@@ -407,33 +437,31 @@ class SubnetworkHotspots(Algorithm):
                 resid = paired[this_index][0]
                 this_index += 1
                 if this_index >= len(paired):    # if there are no more residues to mutate; should be inaccessible
-                    return self.dump_and_return('TER', self.algorithm_history)
+                    return 'TER'
 
             next_mut = [str(int(resid)) + all_resnames[0]]
 
-            self.algorithm_history.muts.append(next_mut)
-            buffer_history(self.algorithm_history)
-            return self.dump_and_return(next_mut, self.algorithm_history)
+            return next_mut
         else:   # unsaturated, so pick an unused mutation on the same residue as the previous mutation
             # First, we need to generate a list of all the mutations that haven't been tried yet on this residue
-            done = [item[0][-3:] for item in self.algorithm_history.muts if item[0][:-3] == self.algorithm_history.muts[-1][0][:-3]]
+            done = [item[0][-3:] for item in algorithm_history.muts if item[0][:-3] == algorithm_history.muts[-1][0][:-3]]
             todo = [item for item in all_resnames if not item in done]
 
             # Then, remove the wild type residue name from the list
             mtop = mdtraj.load_prmtop(thread.history.tops[0])   # 0th topology corresponds to the "wild type" here
-            wt = mtop.residue(int(self.algorithm_history.muts[-1][0][:-3]) - 1)  # mdtraj topology is zero-indexed, so -1
+            wt = mtop.residue(int(algorithm_history.muts[-1][0][:-3]) - 1)  # mdtraj topology is zero-indexed, so -1
             if str(wt)[:3] in todo:
                 todo.remove(str(wt)[:3])   # wt is formatted as <three letter code><zero-indexed resid>
 
-            next_mut = [self.algorithm_history.muts[-1][0][:-3] + todo[0]]
+            next_mut = [algorithm_history.muts[-1][0][:-3] + todo[0]]
 
-            self.algorithm_history.muts.append(next_mut)
-            buffer_history(self.algorithm_history)
-            return self.dump_and_return(next_mut, self.algorithm_history)
+            return next_mut
 
     def reevaluate_idle(self, thread, allthreads):
         # The first condition to meet for this algorithm to allow an idle thread to resume is simply that the simulation
         # for the first system (non-mutated) is finished and has had get_next_step called on it
+        algorithm_history = build_algorithm_history(allthreads)
+
         if os.path.exists('algorithm_history.pkl'):
             algorithm_history = pickle.load(open('algorithm_history.pkl', 'rb'))
             if algorithm_history.muts:
@@ -452,8 +480,10 @@ class SubnetworkHotspots(Algorithm):
 
     def no_unmut_subnets(self):
         # Determine from algorithm_history whether there are any subnetworks not containing at least one single mutant
+        algorithm_history = build_algorithm_history(allthreads)
+
         subnetworks = self.get_subnetworks()
-        if len(set([item[0][:-3] for item in self.algorithm_history.muts])) >= len(subnetworks):    # todo: should/can I do better than this?
+        if len(set([item[0][:-3] for item in algorithm_history.muts])) >= len(subnetworks):    # todo: should/can I do better than this?
             return True
         else:
             return False

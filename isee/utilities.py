@@ -359,7 +359,12 @@ def mutate(coords, topology, mutation, name, settings):
     # if os.path.exists(new_name + '_min.rst7.1'):
     #     os.rename(new_name + '_min.rst7.1', new_name + '_min.rst7')
 
-    # Finally, return the coordinate and topology files!
+    # Finally, clean up unnecessary files and return the coordinate and topology files!
+    os.remove(name + '_min.pdb')
+    os.remove(name + '_tleap.rst7')
+    os.remove(name + '_mutated.pdb')
+    os.remove(name + '_prot.pdb')
+    os.remove(name + '_nonprot.mol2')
     return name + '_min.rst7', mutated_top
 
 
