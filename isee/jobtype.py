@@ -361,7 +361,14 @@ class isEE(JobType):
         if thread.idle:
             # We should be sure at this point that something hasn't gone wrong and idled ALL the threads...
             if all([this_thread.idle for this_thread in allthreads]):
-                raise RuntimeError('all threads are in an idle state, which means something must have gone wrong. '
+                # Reevaluate idle for all threads
+                this_algorithm = factory.algorithm_factory(settings.algorithm)
+                for thread in allthreads:
+                    thread.idle = this_algorithm.reevaluate_idle(thread, allthreads)
+
+                # If problem persists...
+                if all([this_thread.idle for this_thread in allthreads]):
+                    raise RuntimeError('all threads are in an idle state, which means something must have gone wrong. '
                                    'Inspect the restart.pkl file for errors.')
             this_algorithm = factory.algorithm_factory(settings.algorithm)
             return this_algorithm.reevaluate_idle(thread, allthreads)
