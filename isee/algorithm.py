@@ -230,7 +230,7 @@ class Script(Algorithm):
             return Script.get_next_step(self, thread, allthreads, settings)
 
     def get_next_step(self, thread, allthreads, settings):
-        algorithm_history = build_algorithm_history(allthreads)
+        algorithm_history = self.build_algorithm_history(allthreads)
 
         untried = [item for item in settings.mutation_script if not item in algorithm_history.muts]
         try:
@@ -261,7 +261,7 @@ class CovarianceSaturation(Algorithm):
             return 'IDLE'   # need to wait for first simulation to finish before proceeding
 
     def get_next_step(self, thread, allthreads, settings):
-        algorithm_history = build_algorithm_history(allthreads)
+        algorithm_history = self.build_algorithm_history(allthreads)
 
         all_resnames = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA', 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP']
 
@@ -321,7 +321,7 @@ class CovarianceSaturation(Algorithm):
     def reevaluate_idle(self, thread, allthreads):
         # The condition to meet for this algorithm to allow an idle thread to resume is simply that the simulation for
         # the first system (non-mutated) is finished and has had get_next_step called on it
-        algorithm_history = build_algorithm_history(allthreads)
+        algorithm_history = self.build_algorithm_history(allthreads)
 
         if os.path.exists('algorithm_history.pkl'):
             algorithm_history = pickle.load(open('algorithm_history.pkl', 'rb'))
@@ -353,7 +353,7 @@ class SubnetworkHotspots(Algorithm):
             return 'IDLE'   # need to wait for first simulation to finish before proceeding
 
     def get_next_step(self, thread, allthreads, settings):
-        algorithm_history = build_algorithm_history(allthreads)
+        algorithm_history = self.build_algorithm_history(allthreads)
 
         if not settings.TEST:
             all_resnames = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA', 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP']
@@ -460,7 +460,7 @@ class SubnetworkHotspots(Algorithm):
     def reevaluate_idle(self, thread, allthreads):
         # The first condition to meet for this algorithm to allow an idle thread to resume is simply that the simulation
         # for the first system (non-mutated) is finished and has had get_next_step called on it
-        algorithm_history = build_algorithm_history(allthreads)
+        algorithm_history = self.self.build_algorithm_history(allthreads)
 
         if os.path.exists('algorithm_history.pkl'):
             algorithm_history = pickle.load(open('algorithm_history.pkl', 'rb'))
@@ -480,7 +480,7 @@ class SubnetworkHotspots(Algorithm):
 
     def no_unmut_subnets(self):
         # Determine from algorithm_history whether there are any subnetworks not containing at least one single mutant
-        algorithm_history = build_algorithm_history(allthreads)
+        algorithm_history = self.build_algorithm_history(allthreads)
 
         subnetworks = self.get_subnetworks()
         if len(set([item[0][:-3] for item in algorithm_history.muts])) >= len(subnetworks):    # todo: should/can I do better than this?

@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="79413d0a-9e44-48d3-8905-be180cdeb6bd" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/isee/jobtype.py" afterPath="$PROJECT_DIR$/isee/jobtype.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/isee/algorithm.py" afterPath="$PROJECT_DIR$/isee/algorithm.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -53,11 +53,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="algorithm.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="algorithm.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/isee/algorithm.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="56">
-              <caret line="459" column="33" lean-forward="false" selection-start-line="459" selection-start-column="33" selection-end-line="459" selection-end-column="33" />
+            <state relative-caret-position="1008">
+              <caret line="482" column="56" lean-forward="false" selection-start-line="482" selection-start-column="33" selection-end-line="482" selection-end-column="56" />
               <folding>
                 <element signature="e#170#179#0" expanded="true" />
               </folding>
@@ -87,7 +87,7 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="jobtype.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="jobtype.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/isee/jobtype.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="237">
@@ -110,7 +110,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>get_str</find>
       <find>self.</find>
       <find>get_initi</find>
       <find>get_bac</find>
@@ -138,8 +137,9 @@
       <find>348</find>
       <find>parmed</find>
       <find>gatekee</find>
-      <find>base_ind</find>
       <find>algorithm_history</find>
+      <find>base_ind</find>
+      <find>build_algorithm_history</find>
     </findStrings>
     <replaceStrings>
       <replace>isee</replace>
@@ -151,6 +151,7 @@
       <replace>self.algorithm_history</replace>
       <replace>thread.</replace>
       <replace>def get_next_step(self, thread, allthreads, settings):</replace>
+      <replace>self.build_algorithm_history</replace>
     </replaceStrings>
   </component>
   <component name="Git.Settings">
@@ -183,8 +184,8 @@
         <option value="$PROJECT_DIR$/isee/process.py" />
         <option value="$PROJECT_DIR$/isee/infrastructure/configure.py" />
         <option value="$PROJECT_DIR$/isee/utilities.py" />
-        <option value="$PROJECT_DIR$/isee/algorithm.py" />
         <option value="$PROJECT_DIR$/isee/jobtype.py" />
+        <option value="$PROJECT_DIR$/isee/algorithm.py" />
       </list>
     </option>
   </component>
@@ -704,16 +705,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/isee/algorithm.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="56">
-          <caret line="459" column="33" lean-forward="false" selection-start-line="459" selection-start-column="33" selection-end-line="459" selection-end-column="33" />
-          <folding>
-            <element signature="e#170#179#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/isee/process.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-574">
@@ -738,6 +729,16 @@
           <caret line="366" column="84" lean-forward="true" selection-start-line="366" selection-start-column="84" selection-end-line="366" selection-end-column="84" />
           <folding>
             <element signature="e#164#174#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/algorithm.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1008">
+          <caret line="482" column="56" lean-forward="false" selection-start-line="482" selection-start-column="33" selection-end-line="482" selection-end-column="56" />
+          <folding>
+            <element signature="e#170#179#0" expanded="true" />
           </folding>
         </state>
       </provider>
