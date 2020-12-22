@@ -3,18 +3,19 @@ Utility functions implemented here are clearly defined unit operations. They may
 are defined separately for cleanliness and legibility.
 """
 
+import os
+import re
 import sys
 import math
+import numpy
 import pytraj
 import mdtraj
-import numpy
-import re
+import parmed
 import argparse
 from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
 from paprika import tleap
-import parmed
 
 def update_progress(progress, message='Progress', eta=0, quiet=False):
     """
@@ -169,6 +170,9 @@ def mutate(coords, topology, mutation, name, settings):
                 yield
             finally:
                 sys.stderr = old_stderr
+
+    # Force runtime to working directory; should not be necessary, but might be anyway...
+    os.chdir(settings.working_directory)
 
     ### Store box information for later
     # boxline = open(coords, 'r').readlines()[-1]

@@ -138,6 +138,7 @@ def init_threads(settings):
         jobtype.update_history(thread, settings, **{'initialize': True, 'inpcrd': file})    # initialize thread.history
 
         thread.history.tops = [settings.init_topology]   # todo: settings.init_topology also needs to be a list now
+        thread.history.timestamps = [time.time()]
 
         thread.name = file
 

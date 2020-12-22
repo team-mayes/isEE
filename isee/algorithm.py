@@ -104,6 +104,10 @@ class Algorithm(abc.ABC):
 
             algorithm_history.__dict__[key] = append_lists(current, [thread.history.__dict__[key] for thread in allthreads])
 
+        # Sort every entry chronologically by timestamp attribute
+        for key in list(algorithm_history.__dict__.keys()):
+            algorithm_history.__dict__[key] = [x for _,x in sorted(zip(algorithm_history.__dict__['timestamps'], algorithm_history.__dict__[key]))]
+
         # Dump pickle file
         pickle.dump(algorithm_history, open('algorithm_history.pkl.bak', 'wb'))
         if not os.path.getsize('algorithm_history.pkl.bak') == 0:
@@ -455,6 +459,9 @@ class SubnetworkHotspots(Algorithm):
             wt = mtop.residue(int(algorithm_history.muts[-1][0][:-3]) - 1)  # mdtraj topology is zero-indexed, so -1
             if str(wt)[:3] in todo:
                 todo.remove(str(wt)[:3])   # wt is formatted as <three letter code><zero-indexed resid>
+            else:
+                print('WARNING: mutating residue whose wild type residue name is not on the list of possible residue '
+                      'names: ' + wt + '\nThis may be fine or it may reflect a critical error, so consider carefully.')
 
             next_mut = [algorithm_history.muts[-1][0][:-3] + todo[0]]
 
@@ -486,7 +493,7 @@ class SubnetworkHotspots(Algorithm):
         algorithm_history = self.build_algorithm_history(allthreads)
 
         subnetworks = self.get_subnetworks()
-        if len(set([item[0][:-3] for item in algorithm_history.muts])) >= len(subnetworks):    # todo: should/can I do better than this?
+        if len(set([item[0][:-3] for item in algorithm_history.muts if not item == []])) >= len(subnetworks):    # todo: should/can I do better than this?
             return True
         else:
             return False

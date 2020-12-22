@@ -6,6 +6,7 @@ and implements its abstract methods.
 import abc
 import os
 import sys
+import time
 import subprocess
 import random
 import pickle
@@ -292,8 +293,8 @@ class isEE(JobType):
                 thread.history.tops = []              # list of strings; initialized by main.init_threads(), updated by algorithm
                 thread.history.muts = []              # list of lists of strings describing mutations tested; updated by algorithm
                 thread.history.score = []             # list of scores; updated by analyze()
-                thread.history.timestamps = []        # list of ints representing seconds since the epoch for the end of each step, updated by ?
-            if not os.path.exists(settings.working_directory + '/algorithm_history.pkl'):     # initialize algorithm_history file if necessary
+                thread.history.timestamps = []        # list of ints representing seconds since the epoch for the end of each step; initialized by main.init_threads(), updated by algorithm
+            if not os.path.exists(settings.working_directory + '/algorithm_history.pkl'):     # initialize algorithm_history file if necessary # todo: deprecate?
                 pickle.dump(thread.history, open(settings.working_directory + '/algorithm_history.pkl', 'wb'))  # an empty thread.history template
             if 'inpcrd' in kwargs.keys():
                 thread.history.inpcrd.append(kwargs['inpcrd'])
@@ -335,6 +336,7 @@ class isEE(JobType):
 
         # Else, we have a new mutant to direct the thread to build and simulate
         thread.history.muts.append(next_step)
+        thread.history.timestamps.append(time.time())
 
         # Perform desired mutation
         # todo: implement possibility of mutating using something other than initial coordinates/topology as a base?
@@ -352,6 +354,7 @@ class isEE(JobType):
             thread.history.inpcrd = [thread.history.inpcrd[-1]]
             thread.history.tops = [thread.history.tops[-1]]
             thread.history.muts = [thread.history.muts[-1]]
+            thread.history.timestamps = [thread.history.timestamps[-1]]
             thread.suffix = 0
 
         return False    # False: do not terminate
