@@ -100,7 +100,7 @@ def lie(trajectory, topology, settings):
     traj = pytraj.iterload(trajectory, topology)
 
     # Compute LIE
-    lie_temp = pytraj.energy_analysis.lie(traj, mask=settings.ts_mask, frame_indices=[frame])
+    lie_temp = pytraj.energy_analysis.lie(traj, mask=settings.ts_mask)
     EEL = lie_temp['LIE[EELEC]']
     VDW = lie_temp['LIE[EVDW]']
 

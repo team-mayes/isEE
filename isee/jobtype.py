@@ -345,7 +345,7 @@ class isEE(JobType):
         initial_coordinates_to_mutate = settings.initial_coordinates[0]
         if '/' in initial_coordinates_to_mutate:
             initial_coordinates_to_mutate = initial_coordinates_to_mutate[initial_coordinates_to_mutate.rindex('/') + 1:]
-        new_inpcrd, new_top = utilities.mutate(initial_coordinates_to_mutate, settings.init_topology, next_step, settings.initial_coordinates[0] + '_' + '_'.join(next_step), settings)
+        new_inpcrd, new_top = utilities.mutate(initial_coordinates_to_mutate, settings.init_topology, next_step, initial_coordinates_to_mutate + '_' + '_'.join(next_step), settings)
 
         # Update history and return
         thread.history.inpcrd.append(new_inpcrd)

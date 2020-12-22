@@ -69,6 +69,7 @@ def configure(input_file, user_working_directory=''):
 
         # For algorithm = 'script'
         mutation_script: typing.List[str] = ['']
+        # todo: add option for script algorithm to skip WT?
 
         # For algorithms 'covariance_saturation' and 'subnetwork_hotspots'
         covariance_reference_resid: int = -1
