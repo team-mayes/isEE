@@ -340,7 +340,7 @@ class isEE(JobType):
 
         # Perform desired mutation
         # todo: implement possibility of mutating using something other than initial coordinates/topology as a base?
-        if '/' in settings.init_topology:   # todo: this shouldn't be necessary because it should already be done in main.init_threads, but apparently it's still necessary?
+        if '/' in settings.init_topology:   # todo: this shouldn't be necessary because it should already be done in main.init_threads
             settings.init_topology = settings.init_topology[settings.init_topology.rindex('/') + 1:]
         initial_coordinates_to_mutate = settings.initial_coordinates[0]
         if '/' in initial_coordinates_to_mutate:

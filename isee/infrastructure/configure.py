@@ -68,7 +68,7 @@ def configure(input_file, user_working_directory=''):
         min_steps: int = 5000
 
         # For algorithm = 'script'
-        mutation_script: typing.List[str] = ['']
+        mutation_script: typing.List[typing.List[str]] = [['']]
         # todo: add option for script algorithm to skip WT?
 
         # For algorithms 'covariance_saturation' and 'subnetwork_hotspots'

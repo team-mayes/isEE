@@ -95,7 +95,6 @@ def process(thread, running, settings):
     for file in batchfiles:
         thread.jobids.append(taskmanager.submit_batch(file, settings))
 
-
     if thread not in running:
         running.append(thread)
     return running

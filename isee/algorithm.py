@@ -241,7 +241,7 @@ class Script(Algorithm):
 
         untried = [item for item in settings.mutation_script if not item in algorithm_history.muts]
         try:
-            return [untried[0]]     # first untried mutation
+            return untried[0]     # first untried mutation
         except IndexError:  # no untried mutation remains
             return 'TER'
 
