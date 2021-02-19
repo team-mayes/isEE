@@ -13,8 +13,7 @@ import pickle
 import shutil
 import sys
 import time
-from isee import interpret
-from isee import process
+from isee import interpret, process, initialize_charges
 from isee.infrastructure import factory, configure
 
 
@@ -186,7 +185,7 @@ def handle_loop_exception(running, exception, settings):
     raise exception
 
 
-def main(settings, rescue_running=[]):
+def main(settings):
     """
     Perform the primary loop of building, submitting, monitoring, and analyzing jobs.
 
@@ -238,6 +237,11 @@ def main(settings, rescue_running=[]):
     running = allthreads.copy()     # to be pruned later by thread.process()
     termination_criterion = False   # initialize global termination criterion boolean
     jobtype = factory.jobtype_factory(settings.job_type)    # initialize jobtype
+
+    # If desired, set appropriate charge distribution based on results from QM/MM simulation
+    if settings.initialize_charges and not settings.restart:
+        new_top = initialize_charges.main(settings)
+        settings.topology = new_top
 
     # Initialize threads with first process step
     try:

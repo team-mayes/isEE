@@ -67,6 +67,13 @@ def configure(input_file, user_working_directory=''):
         ts_bonds: typing.Tuple[typing.List[str], typing.List[str], typing.List[float], typing.List[float]] = [[''],[''],[-1],[-1]]
         min_steps: int = 5000
 
+        # Initialize charges settings
+        initialize_charges: bool = True
+        ic_qm_mask: str
+        ic_qm_theory: str = 'DFTB3'
+        ic_qm_cut: float = 8.0
+        ic_qm_charge: int = 0
+
         # For algorithm = 'script'
         mutation_script: typing.List[typing.List[str]] = [['']]
         # todo: add option for script algorithm to skip WT?

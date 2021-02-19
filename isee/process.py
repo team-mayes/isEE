@@ -9,7 +9,7 @@ import sys
 import warnings
 from isee.infrastructure import factory
 
-def process(thread, running, settings):
+def process(thread, running, settings, inp_override=''):
     """
     The main function of process.py. Reads the thread to identify the next step, then builds and submits the batch
     file(s) as needed.
@@ -22,6 +22,8 @@ def process(thread, running, settings):
         The list of currently running threads, which will be updated as needed
     settings : argparse.Namespace
         Settings namespace object
+    inp_override : str
+        Specified input file to use in place of the one from jobtype.get_input_file (used by initialize_charges.py)
 
     Returns
     -------
@@ -53,7 +55,12 @@ def process(thread, running, settings):
     jobtype = factory.jobtype_factory(settings.job_type)    # get jobtype for calling jobtype.update_history
     this_inpcrd, this_top = jobtype.get_struct(thread)
     name = thread.current_name
-    inp = jobtype.get_input_file(thread, settings)
+
+    if not inp_override:
+        inp = jobtype.get_input_file(thread, settings)
+    else:
+        inp = inp_override
+
     template = settings.env.get_template(thread.get_batch_template(settings))
 
     these_kwargs = { 'name': thread.name + '_' + name,
