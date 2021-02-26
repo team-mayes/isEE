@@ -266,7 +266,7 @@ def mutate(coords, topology, mutation, name, settings):
     with open(name + '_mutated.pdb', 'w') as f:
         patterns = [re.compile('\s+[A-Z0-9]+\s+[A-Z]{3}\s+' + mutant[:-3] + '\s+') for mutant in mutation]
         for line in open(name + '_prot.pdb', 'r').readlines():
-            if not all(pattern.findall(line) == [] for pattern in patterns):
+            if patterns and not all(pattern.findall(line) == [] for pattern in patterns):
                 pat_index = 0
                 for pattern in patterns:
                     try:
@@ -282,7 +282,6 @@ def mutate(coords, topology, mutation, name, settings):
                 newline = line
             f.write(newline)
 
-
     ### Rebuild with tleap into .rst7 and .prmtop files
     # todo: there's no way to use tleap to do this without being forced into using Amber (or CHARMM?) force fields...
     # todo: I need to come up with a different strategy if I want to move away from Amber-only.
@@ -291,11 +290,11 @@ def mutate(coords, topology, mutation, name, settings):
     system.neutralize = False
     system.output_prefix = name + '_tleap'
     system.template_lines = [
-        'source leaprc.protein.ff14SB',
-        'source leaprc.water.tip3p'] + \
+        'source leaprc.protein.ff19SB',
+        'source leaprc.water.opc',
+        'source leaprc.GLYCAM_06j-1'] + \
         ['source ' + item + '\n' for item in settings.paths_to_forcefields if item] + \
-        ['loadOff atomic_ions.lib',
-        'mut = loadpdb ' + name + '_mutated.pdb',
+        ['mut = loadpdb ' + name + '_mutated.pdb',
         'nonprot = loadmol2 '  + name + '_nonprot.mol2',
         'model = combine { mut nonprot }',
         'set model box {' + box_dimensions + '}'
@@ -306,30 +305,8 @@ def mutate(coords, topology, mutation, name, settings):
     mutated_rst = name + '_tleap.rst7'
     mutated_top = name + '_tleap.prmtop'
 
-    ### Add ts_bonds using parmed
-    parmed_top = parmed.load_file(mutated_top)
-
-    ## KLUDGE KLUDGE KLUDGE ##
-    # todo: kloooooj
-    temp_ts_bonds = copy.copy(settings.ts_bonds)
-    settings.ts_bonds = ([':260@OE2', ':443@O4',  ':443@O4', ':442@N1'],
-                         [':443@H4O', ':443@H4O', ':442@C1', ':442@C1'],
-                         [200,        200,        200,       200],
-                         [1.27,       1.23,       1.9,       2.4])
-    ## KLUDGE KLUDGE KLUDGE ##
-
-    settings.ts_bonds = list(map(list, zip(*settings.ts_bonds)))
-    for bond in settings.ts_bonds:
-        arg = [str(item) for item in bond]
-        try:
-            setbond = parmed.tools.actions.setBond(parmed_top, arg[0], arg[1], arg[2], arg[3])
-            setbond.execute()
-        except parmed.tools.exceptions.SetParamError as e:
-            raise RuntimeError('encountered parmed.tools.exceptions.SetParamError: ' + e + '\n'
-                               'The offending bond and topology are: ' + str(arg) + ' and ' + mutated_top)
-    parmed_top.save(mutated_top, overwrite=True)
-
-    settings.ts_bonds = temp_ts_bonds   # todo: k-k-k-kludge
+    # Add ts_bonds to mutated_top
+    add_ts_bonds(mutated_top, settings)
 
     # if settings.TEST:   # skip minimization to save time
     #     os.rename(mutated_rst, name + '_min.rst7')
@@ -369,7 +346,53 @@ def mutate(coords, topology, mutation, name, settings):
     os.remove(name + '_mutated.pdb')
     os.remove(name + '_prot.pdb')
     os.remove(name + '_nonprot.mol2')
+
     return name + '_min.rst7', mutated_top
+
+
+def add_ts_bonds(top, settings):
+    """
+    Add settings.ts_bonds to the given topology file using parmed. The file will be modified in place.
+
+    Parameters
+    ----------
+    top : str
+        Path to the topology file to modify
+    settings : argparse.Namespace
+        Settings namespace object
+
+    Returns
+    -------
+    None
+
+    """
+
+    # Load topology into parmed
+    parmed_top = parmed.load_file(top)
+
+    ## KLUDGE KLUDGE KLUDGE ##
+    # todo: kloooooj
+    temp_ts_bonds = copy.copy(settings.ts_bonds)
+    settings.ts_bonds = ([':260@OE2', ':443@O4',  ':443@O4', ':442@N1'],
+                         [':443@H4O', ':443@H4O', ':442@C1', ':442@C1'],
+                         [200,        200,        200,       200],
+                         [1.27,       1.23,       1.9,       2.4])
+    ## KLUDGE KLUDGE KLUDGE ##
+
+    settings.ts_bonds = list(map(list, zip(*settings.ts_bonds)))
+    for bond in settings.ts_bonds:
+        arg = [str(item) for item in bond]
+        try:
+            setbond = parmed.tools.actions.setBond(parmed_top, arg[0], arg[1], arg[2], arg[3])
+            setbond.execute()
+        except parmed.tools.exceptions.SetParamError as e:
+            raise RuntimeError('encountered parmed.tools.exceptions.SetParamError: ' + e + '\n'
+                               'The offending bond and topology are: ' + str(arg) + ' and ' + top)
+
+    # Save the topology file with the new bonds
+    parmed_top.save(top, overwrite=True)
+
+    settings.ts_bonds = temp_ts_bonds   # todo: k-k-k-kludge
 
 
 def covariance_profile(thread, move_index, settings):

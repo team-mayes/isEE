@@ -39,7 +39,7 @@ def configure(input_file, user_working_directory=''):
         # argparse.Namelist object, just for convenience.
 
         # Core settings required for all jobs
-        job_type: str = 'isEE'
+        job_type: str = 'isee'
         batch_system: str
         restart: bool
         md_engine: str = 'amber'

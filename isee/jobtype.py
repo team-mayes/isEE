@@ -322,9 +322,8 @@ class isEE(JobType):
 
         if next_step == 'WT':   # do nothing, correct structure is already set in history.tops and history.inpcrd
             thread.history.muts.append([])  # empty muts entry, for consistency in indexing
-            return False        # False: do not globally terminate
 
-        if next_step == 'IDLE':
+        elif next_step == 'IDLE':
             thread.idle = True
             return False        # False: do not globally terminate
 
@@ -334,7 +333,7 @@ class isEE(JobType):
             thread.terminated = True
             return False        # False: do not globally terminate
 
-        # Else, we have a new mutant to direct the thread to build and simulate
+        # If we get here, we have a new mutant (or WT) to direct the thread to build and simulate
         thread.history.muts.append(next_step)
         thread.history.timestamps.append(time.time())
 
@@ -345,7 +344,11 @@ class isEE(JobType):
         initial_coordinates_to_mutate = settings.initial_coordinates[0]
         if '/' in initial_coordinates_to_mutate:
             initial_coordinates_to_mutate = initial_coordinates_to_mutate[initial_coordinates_to_mutate.rindex('/') + 1:]
-        new_inpcrd, new_top = utilities.mutate(initial_coordinates_to_mutate, settings.init_topology, next_step, initial_coordinates_to_mutate + '_' + '_'.join(next_step), settings)
+        if next_step == 'WT':
+            mutations = ['']    # need to call mutate for WT to apply ts_bonds to the topology file
+        else:
+            mutations = next_step
+        new_inpcrd, new_top = utilities.mutate(initial_coordinates_to_mutate, settings.init_topology, mutations, initial_coordinates_to_mutate + '_' + '_'.join(next_step), settings)
 
         # Update history and return
         thread.history.inpcrd.append(new_inpcrd)
@@ -353,7 +356,6 @@ class isEE(JobType):
         thread.suffix += 1
 
         if not thread.history.trajs:    # if this is the first step in this thread
-            # reformat thread data to reflect that 'WT' is being skipped
             thread.history.inpcrd = [thread.history.inpcrd[-1]]
             thread.history.tops = [thread.history.tops[-1]]
             thread.history.muts = [thread.history.muts[-1]]

@@ -228,6 +228,28 @@ def main(settings):
         temp_settings.__dict__.pop('env')  # env attribute is not picklable
         pickle.dump(temp_settings, open(settings.working_directory + '/settings.pkl', 'wb'), protocol=2)
 
+    # If desired, set appropriate charge distribution based on results from QM/MM simulation
+    if settings.initialize_charges and not settings.restart:
+        # Have to do this stuff first even though it'll get repeated in init_threads... ew # todo: clean up
+        # Set topology properly even if it's given as a path
+        og_prmtop = settings.init_topology
+        if '/' in settings.init_topology:
+            settings.init_topology = settings.init_topology[settings.init_topology.rindex('/') + 1:]
+        try:
+            shutil.copy(og_prmtop, settings.working_directory + '/' + settings.init_topology)
+        except shutil.SameFileError:
+            pass
+        # Copy initial coordinate files to working directory
+        jobtype = factory.jobtype_factory(settings.job_type)
+        jobtype.get_initial_coordinates(settings)
+
+        current_dir = os.getcwd()               # store current directory
+        os.chdir(settings.working_directory)    # move to working directory to do initialize_charges
+
+        new_top = initialize_charges.main(settings)
+        settings.init_topology = settings.working_directory + '/' + new_top
+        os.chdir(current_dir)                   # move back to previous directory to initialize threads
+
     # Build or load threads
     allthreads = init_threads(settings)
 
@@ -237,11 +259,6 @@ def main(settings):
     running = allthreads.copy()     # to be pruned later by thread.process()
     termination_criterion = False   # initialize global termination criterion boolean
     jobtype = factory.jobtype_factory(settings.job_type)    # initialize jobtype
-
-    # If desired, set appropriate charge distribution based on results from QM/MM simulation
-    if settings.initialize_charges and not settings.restart:
-        new_top = initialize_charges.main(settings)
-        settings.topology = new_top
 
     # Initialize threads with first process step
     try:
