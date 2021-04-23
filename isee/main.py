@@ -226,10 +226,15 @@ def main(settings):
     if not settings.dont_dump:
         temp_settings = copy.deepcopy(settings)  # initialize temporary copy of settings to modify
         temp_settings.__dict__.pop('env')  # env attribute is not picklable
-        pickle.dump(temp_settings, open(settings.working_directory + '/settings.pkl', 'wb'), protocol=2)
+        pickle.dump(temp_settings, open(settings.working_directory + '/settings.pkl', 'wb'))
 
     # If desired, set appropriate charge distribution based on results from QM/MM simulation
-    if settings.initialize_charges and not settings.restart:
+    if settings.initialize_charges and not settings.restart and not (settings.DEBUG or settings.SPOOF):
+        if any([not item == settings.initial_coordinates[0] for item in settings.initial_coordinates]):
+            raise RuntimeError('initialize_charges does not currently support multiple threads with different initial '
+                               'coordinates. All threads must have the same initial coordinates or initialize_charges '
+                               'must be set to False.')
+
         # Have to do this stuff first even though it'll get repeated in init_threads... ew # todo: clean up
         # Set topology properly even if it's given as a path
         og_prmtop = settings.init_topology
@@ -246,8 +251,9 @@ def main(settings):
         current_dir = os.getcwd()               # store current directory
         os.chdir(settings.working_directory)    # move to working directory to do initialize_charges
 
-        new_top = initialize_charges.main(settings)
+        new_top, new_inpcrd = initialize_charges.main(settings)
         settings.init_topology = settings.working_directory + '/' + new_top
+        settings.initial_coordinates = [new_inpcrd for null in range(len(settings.initial_coordinates))]
         os.chdir(current_dir)                   # move back to previous directory to initialize threads
 
     # Build or load threads

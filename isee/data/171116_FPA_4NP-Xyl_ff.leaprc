@@ -1,0 +1,35 @@
+logFile leap.log
+#
+# ----- leaprc for loading my custom forcefield for Fucopyranosyl Azide (FPA) and 4-nitrophenyl xylopyranose (4NP-Xyl) 
+#       Tucker Burgin, Nov. 16, 2017
+#		University of Michigan, Mayes Lab
+#
+#	load atom type hybridizations
+#
+addAtomTypes {
+	{ "oh"  "O" "sp3" }
+	{ "os"  "O" "sp3" }
+	{ "c3"  "C" "sp3" }
+	{ "ni"  "N" "sp2" }
+	{ "nd"  "N" "sp2" }
+	{ "ne"  "N" "sp2" }
+	{ "ha"  "H" "sp3" }
+	{ "h1"  "H" "sp3" }
+	{ "ho"  "H" "sp3" }
+	{ "hw"  "H" "sp3" }
+	{ "ow"  "O" "sp3" }
+	{ "ca"  "C" "sp2" }
+	{ "ha"  "H" "sp3" }
+	{ "no"  "N" "sp2" }
+	{ "o"  "O" "sp2" }
+	{ "CT"  "C" "sp3" }
+	{ "H1"  "H" "sp3" }
+	{ "H2"  "H" "sp3" }
+	{ "Ho"  "H" "sp3" }
+	{ "Oh"  "O" "sp3" }
+    { "Os"  "O" "sp3" }
+}
+#
+#	Load the corresponding force field parameter set.
+#
+gaff = loadamberparams 171116_FPA_4NP-Xyl_ff.dat

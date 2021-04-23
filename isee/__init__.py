@@ -9,6 +9,7 @@ from . import jobtype
 from . import process
 from . import utilities
 from . import algorithm
+from . import initialize_charges
 from isee.infrastructure import configure
 from isee.infrastructure import batchsystem
 from isee.infrastructure import factory

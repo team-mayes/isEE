@@ -52,7 +52,7 @@ class AdaptSimple(TaskManager):
         batchsystem = factory.batchsystem_factory(settings.batch_system)
         command = batchsystem.get_submit_command().replace('{file}', filename)
 
-        if settings.DEBUG:
+        if settings.DEBUG or settings.SPOOF:
             command = 'echo "this is a nonsense string for testing purposes: 123456, now here are some garbage symbols: ?!@#$/\';:[]+=_-.<,>"'
 
         count = 1

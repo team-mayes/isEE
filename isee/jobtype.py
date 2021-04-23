@@ -266,7 +266,7 @@ class isEE(JobType):
         return list_to_return
 
     def get_next_step(self, thread, settings):
-        if thread.history.muts[-1]:
+        if thread.history.muts and thread.history.muts[-1]:
             return '_'.join(thread.history.muts[-1])
         else:
             return 'unmutated'
@@ -309,7 +309,12 @@ class isEE(JobType):
                 thread.history.trajs[thread.suffix].append(kwargs['nc'])
 
     def analyze(self, thread, settings):
-        thread.history.score.append(utilities.lie(thread.history.trajs[-1], thread.history.tops[-1], settings))
+        if not settings.SPOOF:  # default behavior
+            thread.history.score.append(utilities.lie(thread.history.trajs[-1], thread.history.tops[-1], settings))
+            if settings.storage_directory:  # move a 'dry' copy to storage, if we have a storage directory
+                utilities.strip_and_store(thread.history.trajs[-1], thread.history.tops[-1], settings)
+        else:   # spoof behavior
+            thread.history.score.append(utilities.score_spoof(settings.seq, settings.rmsd_covar, settings))
 
     def algorithm(self, thread, allthreads, settings):
         # Get next mutation to apply from the desired algorithm, or else terminate
@@ -321,7 +326,8 @@ class isEE(JobType):
             next_step = this_algorithm.get_next_step(thread, allthreads, settings)
 
         if next_step == 'WT':   # do nothing, correct structure is already set in history.tops and history.inpcrd
-            thread.history.muts.append([])  # empty muts entry, for consistency in indexing
+            # thread.history.muts.append([])  # empty muts entry, for consistency in indexing
+            next_step = ['WT']
 
         elif next_step == 'IDLE':
             thread.idle = True
@@ -344,7 +350,7 @@ class isEE(JobType):
         initial_coordinates_to_mutate = settings.initial_coordinates[0]
         if '/' in initial_coordinates_to_mutate:
             initial_coordinates_to_mutate = initial_coordinates_to_mutate[initial_coordinates_to_mutate.rindex('/') + 1:]
-        if next_step == 'WT':
+        if next_step == ['WT']:
             mutations = ['']    # need to call mutate for WT to apply ts_bonds to the topology file
         else:
             mutations = next_step
@@ -383,6 +389,7 @@ class isEE(JobType):
 
         # If job for this thread has status 'C'ompleted/'C'anceled...
         if thread.get_status(0, settings) == 'C':     # index 0 because there is only ever one element in thread.jobids
+            # todo: implement restarting if simulation crashed before a certain number of steps completed?
             return True
         else:
             return False

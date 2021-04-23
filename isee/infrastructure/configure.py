@@ -65,34 +65,50 @@ def configure(input_file, user_working_directory=''):
         degeneracy: int = 0
         initial_coordinates: typing.List[str] = ['']    # todo: in isEE as currently written, each thread has to have the same initial coordinates, so either change that or change this
         ts_bonds: typing.Tuple[typing.List[str], typing.List[str], typing.List[float], typing.List[float]] = [[''],[''],[-1],[-1]]
+        hmr: bool = False
         min_steps: int = 5000
+        storage_directory: str = ''
 
         # Initialize charges settings
         initialize_charges: bool = True
-        ic_qm_mask: str
+        ic_qm_mask: str = ''
         ic_qm_theory: str = 'DFTB3'
         ic_qm_cut: float = 8.0
         ic_qm_charge: int = 0
 
         # For algorithm = 'script'
-        mutation_script: typing.List[typing.List[str]] = [['']]
+        mutation_script: typing.List[typing.List[str]] = []
         # todo: add option for script algorithm to skip WT?
 
-        # For algorithms 'covariance_saturation' and 'subnetwork_hotspots'
+        # For algorithms 'monte_carlo', 'covariance_saturation', and 'subnetwork_hotspots'
         covariance_reference_resid: int = -1
+        immutable: typing.List[int] = []
+
+        # For algorithm = 'monte_carlo'
+        max_plurality: int = 3
+        plural_penalty: float = 1
 
         # Linear Interaction Energy parameters
         ts_mask: str = ''
         lie_alpha: float = 0.18
         lie_beta: float = 0.33
 
+        # Stability model parameters
+        stabilitymodel: str = 'ddgunmean'
+        destabilization_cutoff: float = -3.0
+
         # Other
         restart_terminated_threads: bool = True
+        pH: float = 7
 
         # Custom Amber force fields, if required
         paths_to_forcefields: typing.List[str] = ['']
 
         # Not expected to be set by user
+        SPOOF: bool = False     # True causes simulations to be skipped and scores to be spoofed
+        spoof_latent = False    # internal for spoofing
+        seq = []                # internal for spoofing
+        rmsd_covar = []         # internal for spoofing
         TEST: bool = False      # True causes some functions to use much less rigorous methods, for testing purposes
         DEBUG: bool = False     # True causes some functions to return dummy values for testing purposes
         dont_dump: bool = False     # when True, prevents dumping settings to settings.pkl
@@ -131,6 +147,8 @@ def configure(input_file, user_working_directory=''):
         settings.path_to_input_files = settings.path_to_input_files[:-1]
     if settings.path_to_templates[-1] == '/':
         settings.path_to_templates = settings.path_to_templates[:-1]
+    if settings.storage_directory[-1] == '/':
+        settings.storage_directory = settings.storage_directory[:-1]
 
     # Set Jinja2 environment
     if os.path.exists(settings.path_to_templates):

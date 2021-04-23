@@ -4,6 +4,7 @@ needed, or used individually from the command line by providing an appropriate s
 """
 
 import argparse
+import mdtraj
 import pickle
 import sys
 import time
@@ -68,10 +69,10 @@ def main(settings):
 
     # Make a thread to pass to process
     thread = iseemain.Thread()
-    thread.name = 'initialize_charges'
+    thread.name = 'ic'
     thread.skip_update = True
     thread.idle = False
-    thread.current_name = 'prod'
+    thread.current_name = 'ic'
     thread.terminated = False
     thread.history = argparse.Namespace()
     thread.history.inpcrd = settings.initial_coordinates
@@ -85,10 +86,10 @@ def main(settings):
     # todo: have to do better than this if I want to publish this code.
     temp_settings = copy.copy(settings)
     temp_settings.solver = 'sander'
-    temp_settings.walltime = '00:05:00'
+    temp_settings.walltime = '01:00:00'
     temp_settings.ppn = 1
     temp_settings.nodes = 1
-    temp_settings.mem = '1000mb'
+    temp_settings.md_engine = 'amber_init_charges'
 
     # Submit job with process
     running = process(thread, [], temp_settings, inp_override=new_input_file)
@@ -159,10 +160,106 @@ def main(settings):
             if not len(third_table) == len(first_table_frmt):
                raise RuntimeError('Encountered unexpected IndexError in trying to build MM index/charge mapping')
 
-    # Finally, for each term in third_table, set the corresponding atom to the specified partial charge using parmed
-    new_top = 'charge_initialized_' + settings.init_topology
-    parmed_top = parmed.load_file(settings.init_topology)
-    for atom_charge_pair in third_table:
+    # Now we want to get each index in third_table as a function of the index of one atom per residue and save that
+    # information as a .pkl file for set_charges to interpret later.
+    mtop = mdtraj.load_prmtop(settings.init_topology)
+    residues = []           # list of residues accounted for
+    first_index = []        # index for first atom come to in each residue
+    get_index_strs = []     # :RES@NAME for first encountered index in residue in corresponding position in residues
+    relative_indices = []   # strings to evaluate to obtain each atom index, in same order as third_table
+    pattern = re.compile('[0-9]+')  # regex for getting resid integer out of mtop residue
+    for atom_index in [int(item[0]) for item in third_table]:
+        res = pattern.findall(str(mtop.atom(atom_index - 1).residue))[-1]   # - 1 converts from Amber to mdtraj
+        if not res in residues:
+            residues.append(res)
+            first_index.append(atom_index)
+            get_index_str = ':' + res + '@' + mtop.atom(atom_index).name
+            get_index_strs.append(get_index_str)
+            relative_indices.append(get_index_str)
+        else:
+            index_in_residues = residues.index(res)
+            relative_distance = atom_index - first_index[index_in_residues]
+            relative_indices.append(get_index_strs[index_in_residues] + ' + ' + str(relative_distance))
+    relative_charge_table = [[relative_indices[i], third_table[i][1]] for i in range(len(relative_indices))]
+    pickle.dump(relative_charge_table, open('relative_charge_table.pkl', 'wb'))
+
+    # Finally, call set_charges to actually implement modifying the topology file
+    new_top = set_charges(settings.init_topology)
+
+    # Setup thread and temp_settings again for equilibration job with new topology file
+    thread.current_name = 'equil'
+    thread.skip_update = True
+    thread.history.tops = [new_top]
+    temp_settings.solver = 'pmemd.cuda'
+    temp_settings.walltime = '02:00:00'
+    temp_settings.md_engine = 'amber'
+
+    new_input_file = 'ic_equil_amber.in'
+    with open(new_input_file, 'w') as f:
+        added = False
+        for line in input_lines:
+            if 'dt=' in line:
+                line = '  dt=0.002,\n'          # 2 fs steps
+            elif 'nstlim=' in line:
+                line = '  nstlim=500000,\n'     # 500000 steps -> 1 ns run
+            f.write(line)
+
+    # Submit new equilibration job with process
+    running = process(thread, [], temp_settings, inp_override=new_input_file)
+
+    # Use the same loop strategy as in main.main to wait for this job to finish
+    while True:
+        if thread.gatekeeper(running, settings):
+            break
+        else:
+            time.sleep(30)  # to prevent too-frequent calls to batch system by thread.gatekeeper
+
+    return new_top, settings.working_directory + '/' + thread.name + '_' + thread.current_name + '.rst7'
+
+def set_charges(top):
+    """
+    Implements setting the charges in a topology file 'top' to match the
+
+    Parameters
+    ----------
+    settings: argparse.Namespace
+        The settings namespace object.
+
+    Returns
+    -------
+    new_top: str
+        Path to the newly written topology file with the appropriate charge distribution
+
+    """
+    # First step: load relative_charge_table.pkl file and then calculate indices to produce absolute_charge_table
+    relative_charge_table = pickle.load(open('relative_charge_table.pkl', 'rb'))
+    evaluated = []
+    pattern = re.compile('\:[0-9]+\@[A-Z0-9]+')
+    mtop = mdtraj.load_prmtop(top)
+    for item in relative_charge_table:
+        relative_to = pattern.findall(item[0])[0]
+        if not relative_to in [item[0] for item in evaluated]:
+            parsed = relative_to.replace(':', 'resid ').replace('@', ' and name ')
+            relative_to_index = str(mtop.select(parsed)[0])
+        else:
+            internal_index = [item[0] for item in evaluated].index(relative_to)
+            relative_to_index = str(evaluated[internal_index][1])
+        to_eval = item[0].replace(relative_to, relative_to_index)
+        evaluated.append([relative_to, eval(to_eval)])
+
+    absolute_charge_table = [[evaluated[i][1], relative_charge_table[i][1]] for i in range(len(relative_charge_table))]
+
+    # If top is a path, dissect it into filename and path to that filename
+    if '/' in top:
+        path_to_top = top[:top.rindex('/') + 1]
+        top = top[top.rindex('/') + 1:]
+    else:
+        path_to_top = ''
+
+    parmed_top = parmed.load_file(path_to_top + top)
+
+    new_top = 'ic_' + top
+    for atom_charge_pair in absolute_charge_table:
         arg = [str(item) for item in atom_charge_pair]
         try:
             # change <property> <mask> <new_value>
@@ -171,9 +268,9 @@ def main(settings):
         except parmed.tools.exceptions.SetParamError as e:
             raise RuntimeError('encountered parmed.tools.exceptions.SetParamError: ' + e + '\n'
                                'The offending atom/charge pair is: ' + str(arg))
-    parmed_top.save(new_top, overwrite=True)
+    parmed_top.write_parm(path_to_top + new_top)
 
-    return new_top
+    return path_to_top + new_top
 
 if __name__ == "__main__":
     # Load settings.pkl file given as command line argument

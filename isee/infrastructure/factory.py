@@ -24,6 +24,8 @@ def mdengine_factory(mdengine_toolkit):
 
     """
 
+    mdengine_toolkit = mdengine_toolkit.lower()
+
     mdengine_toolkits = {'amber': mdengine.AdaptAmber()}
 
     if mdengine_toolkit not in mdengine_toolkits.keys():
@@ -47,6 +49,8 @@ def batchsystem_factory(batchsystem_toolkit):
         Instance of a BatchSystem adapter
 
     """
+
+    batchsystem_toolkit = batchsystem_toolkit.lower()
 
     batchsystem_toolkits = {'slurm': batchsystem.AdaptSlurm(),
                             'pbs': batchsystem.AdaptPBS(),
@@ -74,6 +78,8 @@ def jobtype_factory(jobtype_toolkit):
 
     """
 
+    jobtype_toolkit = jobtype_toolkit.lower()
+
     jobtype_toolkits = {'isee': jobtype.isEE()}
 
     if jobtype_toolkit not in jobtype_toolkits.keys():
@@ -97,6 +103,8 @@ def taskmanager_factory(taskmanager_toolkit):
         Instance of a TaskManager adapter
 
     """
+
+    taskmanager_toolkit = taskmanager_toolkit.lower()
 
     taskmanager_toolkits = {'simple': taskmanager.AdaptSimple()}
 
@@ -122,11 +130,40 @@ def algorithm_factory(algorithm_toolkit):
 
     """
 
+    algorithm_toolkit = algorithm_toolkit.lower()
+
     algorithm_toolkits = {'script': algorithm.Script(),
                           'covariance_saturation': algorithm.CovarianceSaturation(),
-                          'subnetwork_hotspots': algorithm.SubnetworkHotspots()}
+                          'subnetwork_hotspots': algorithm.SubnetworkHotspots(),
+                          'monte_carlo': algorithm.MonteCarlo()}
 
     if algorithm_toolkit not in algorithm_toolkits.keys():
         raise ValueError('unsupported Algorithm name: ' + algorithm_toolkit)
 
     return algorithm_toolkits[algorithm_toolkit]
+
+
+def stabilitymodel_factory(stabilitymodel_toolkit):
+    """
+    Factory function for StabilityModels.
+
+    Parameters
+    ----------
+    stabilitymodel_toolkit : str
+        Name of the StabilityModel to invoke
+
+    Returns
+    -------
+    stabilitymodel : StabilityModel
+        Instance of a StabilityModel adapter
+
+    """
+
+    stabilitymodel_toolkit = stabilitymodel_toolkit.lower()
+
+    stabilitymodel_toolkits = {'ddgunmean': stabilitymodel.DDGunMean()}
+
+    if stabilitymodel_toolkit not in stabilitymodel_toolkits.keys():
+        raise ValueError('unsupported StabilityModel name: ' + stabilitymodel_toolkit)
+
+    return stabilitymodel_toolkits[stabilitymodel_toolkit]
