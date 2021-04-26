@@ -324,8 +324,14 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
                         continue
                     if titration_index >= 0 and titrations[titration_index][0] in ['HIS', 'ASP', 'GLU'] and \
                             not int(titrations[titration_index][1]) in settings.immutable and \
-                            not titrations[titration_index][0] == titrations[titration_index][2]:
+                            not titrations[titration_index][0] == titrations[titration_index][2] and \
+                            not line.split()[2][0] == 'H':  # last statement: if this is not a hydrogen
                         newline = line.replace(titrations[titration_index][0], titrations[titration_index][2])
+                    elif titration_index >= 0 and titrations[titration_index][0] in ['HIS', 'ASP', 'GLU'] and \
+                            not int(titrations[titration_index][1]) in settings.immutable and \
+                            not titrations[titration_index][0] == titrations[titration_index][2] and \
+                            line.split()[2][0] == 'H':  # same as above but it IS a hydrogen
+                        newline = ''
                     else:
                         newline = line
                 except ValueError:  # this line doesn't correspond to an entry in titrations
@@ -671,6 +677,9 @@ def strip_and_store(traj, top, settings):
     None
 
     """
+
+    if not os.path.exists(settings.storage_directory):
+        os.mkdir(settings.storage_directory)
 
     # Trajectory
     ptraj = pytraj.iterload(traj, top)

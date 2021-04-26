@@ -251,9 +251,9 @@ def main(settings):
         current_dir = os.getcwd()               # store current directory
         os.chdir(settings.working_directory)    # move to working directory to do initialize_charges
 
-        new_top, new_inpcrd = initialize_charges.main(settings)
+        new_top = initialize_charges.main(settings)
         settings.init_topology = settings.working_directory + '/' + new_top
-        settings.initial_coordinates = [new_inpcrd for null in range(len(settings.initial_coordinates))]
+        # settings.initial_coordinates = [new_inpcrd for null in range(len(settings.initial_coordinates))]
         os.chdir(current_dir)                   # move back to previous directory to initialize threads
 
     # Build or load threads

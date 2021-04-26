@@ -186,39 +186,40 @@ def main(settings):
     # Finally, call set_charges to actually implement modifying the topology file
     new_top = set_charges(settings.init_topology)
 
-    # Setup thread and temp_settings again for equilibration job with new topology file
-    thread.current_name = 'equil'
-    thread.skip_update = True
-    thread.history.tops = [new_top]
-    temp_settings.solver = 'pmemd.cuda'
-    temp_settings.walltime = '02:00:00'
-    temp_settings.md_engine = 'amber'
+    ## Deprecated additional minimization/equilibration step following charge initialization
+    # # Setup thread and temp_settings again for equilibration job with new topology file
+    # thread.current_name = 'equil'
+    # thread.skip_update = True
+    # thread.history.tops = [new_top]
+    # temp_settings.solver = 'pmemd.cuda'
+    # temp_settings.walltime = '02:00:00'
+    # temp_settings.md_engine = 'amber'
+    #
+    # new_input_file = 'ic_equil_amber.in'
+    # with open(new_input_file, 'w') as f:
+    #     added = False
+    #     for line in input_lines:
+    #         if 'dt=' in line:
+    #             line = '  dt=0.002,\n'          # 2 fs steps
+    #         elif 'nstlim=' in line:
+    #             line = '  nstlim=500000,\n'     # 500000 steps -> 1 ns run
+    #         f.write(line)
+    #
+    # # Submit new equilibration job with process
+    # running = process(thread, [], temp_settings, inp_override=new_input_file)
+    #
+    # # Use the same loop strategy as in main.main to wait for this job to finish
+    # while True:
+    #     if thread.gatekeeper(running, settings):
+    #         break
+    #     else:
+    #         time.sleep(30)  # to prevent too-frequent calls to batch system by thread.gatekeeper
 
-    new_input_file = 'ic_equil_amber.in'
-    with open(new_input_file, 'w') as f:
-        added = False
-        for line in input_lines:
-            if 'dt=' in line:
-                line = '  dt=0.002,\n'          # 2 fs steps
-            elif 'nstlim=' in line:
-                line = '  nstlim=500000,\n'     # 500000 steps -> 1 ns run
-            f.write(line)
-
-    # Submit new equilibration job with process
-    running = process(thread, [], temp_settings, inp_override=new_input_file)
-
-    # Use the same loop strategy as in main.main to wait for this job to finish
-    while True:
-        if thread.gatekeeper(running, settings):
-            break
-        else:
-            time.sleep(30)  # to prevent too-frequent calls to batch system by thread.gatekeeper
-
-    return new_top, settings.working_directory + '/' + thread.name + '_' + thread.current_name + '.rst7'
+    return new_top #, settings.working_directory + '/' + thread.name + '_' + thread.current_name + '.rst7'
 
 def set_charges(top):
     """
-    Implements setting the charges in a topology file 'top' to match the
+    Implements setting the charges in a topology file 'top' to match the contents of relative_charge_table.pkl
 
     Parameters
     ----------

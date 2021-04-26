@@ -7,6 +7,7 @@ the input files in place.
 import os
 import re
 import sys
+import mdtraj
 import pickle
 import pytraj
 import argparse
@@ -15,7 +16,7 @@ import fileinput
 from contextlib import contextmanager
 from moleculekit.molecule import Molecule
 from moleculekit.tools.preparation import proteinPrepare
-from isee import utilities
+from isee.utilities import mutate
 
 def main(rst, top):
     """
@@ -57,7 +58,7 @@ def main(rst, top):
     traj = pytraj.load(rst, top)
     traj.strip('!(' + protein_resnames + ')')
     pdbname = rst.replace('.rst7', '') + '.pdb'  # removes .rst7 extension if present, adds .pdb either way
-    pytraj.write_traj(pdbname, traj, overwrite=True)
+    pytraj.write_traj(pdbname, traj, 'pdb', overwrite=True)
     if not os.path.exists(pdbname):
         raise RuntimeError('failed to create PDB file: ' + pdbname)
 
@@ -117,7 +118,7 @@ def main(rst, top):
         ii += 1
 
     # Call mutate with pkas to apply the changes to the protonation state
-    new_rst, new_top = utilities.mutate(rst, top, [], pdbname[:-4], settings, titrations)
+    new_rst, new_top = mutate(rst, top, [], pdbname[:-4], settings, titrations)
 
     # Finally, rename files produced by mutate to match filenames that this was called with
     os.rename(new_rst, rst)
@@ -135,28 +136,29 @@ def main(rst, top):
 
 
 if __name__ == "__main__":
-    settings = argparse.Namespace()
-    settings.pH = 5
-    settings.SPOOF = False
-    settings.working_directory = './'
-    settings.topology = 'TmAfc_D224G_t200.prmtop'
-    settings.lie_alpha = 0.18
-    settings.lie_beta = 0.33
-    settings.hmr = False
-    settings.ts_mask = ':442,443'
-    settings.paths_to_forcefields = ['171116_FPA_4NP-Xyl_ff.leaprc']
-    settings.min_steps = 0
-    settings.immutable = [260]
+    ## All this stuff until the last line just for testing
+    # settings = argparse.Namespace()
+    # settings.pH = 5
+    # settings.SPOOF = False
+    # settings.working_directory = './'
+    # settings.topology = 'TmAfc_D224G_t200.prmtop'
+    # settings.lie_alpha = 0.18
+    # settings.lie_beta = 0.33
+    # settings.hmr = False
+    # settings.ts_mask = ':442,443'
+    # settings.paths_to_forcefields = ['171116_FPA_4NP-Xyl_ff.leaprc']
+    # settings.min_steps = 0
+    # settings.immutable = [260]
+    #
+    # # Residue1:AtomName1; Residue2:AtomName2; weight in kcal/mol-Å**2; equilibrium bond length in Å
+    # settings.ts_bonds = ([':260@OE2', ':***@O4', ':***@O4', ':***@N1'],
+    #                      [':***@H4O', ':***@H4O', ':***@C1', ':***@C1'],
+    #                      [200, 200, 200, 200],
+    #                      [1.27, 1.23, 1.9, 2.4])
+    #
+    # pickle.dump(settings, open('settings.pkl', 'wb'))
+    #
+    # main('test_tleap_min.rst7', 'test_tleap.prmtop')
+    # os.remove('settings.pkl')
 
-    # Residue1:AtomName1; Residue2:AtomName2; weight in kcal/mol-Å**2; equilibrium bond length in Å
-    settings.ts_bonds = ([':260@OE2', ':***@O4', ':***@O4', ':***@N1'],
-                         [':***@H4O', ':***@H4O', ':***@C1', ':***@C1'],
-                         [200, 200, 200, 200],
-                         [1.27, 1.23, 1.9, 2.4])
-
-    pickle.dump(settings, open('settings.pkl', 'wb'))
-
-    main('test_tleap_min.rst7', 'test_tleap.prmtop')
-    os.remove('settings.pkl')
-
-    # main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2])

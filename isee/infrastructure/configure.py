@@ -67,7 +67,7 @@ def configure(input_file, user_working_directory=''):
         ts_bonds: typing.Tuple[typing.List[str], typing.List[str], typing.List[float], typing.List[float]] = [[''],[''],[-1],[-1]]
         hmr: bool = False
         min_steps: int = 5000
-        storage_directory: str = ''
+        storage_directory: str = '/'
 
         # Initialize charges settings
         initialize_charges: bool = True
