@@ -310,9 +310,19 @@ class isEE(JobType):
 
     def analyze(self, thread, settings):
         if not settings.SPOOF:  # default behavior
-            thread.history.score.append(utilities.lie(thread.history.trajs[-1], thread.history.tops[-1], settings))
             if settings.storage_directory:  # move a 'dry' copy to storage, if we have a storage directory
-                utilities.strip_and_store(thread.history.trajs[-1], thread.history.tops[-1], settings)
+                dry_traj, dry_top = utilities.strip_and_store(thread.history.trajs[-1][0], thread.history.tops[-1], settings)   # I honestly have no idea why thread.history.trajs[-1] is a list here when it was a string just before?
+                thread.history.score.append(utilities.lie(dry_traj, dry_top, settings))
+
+                # Write results in a human-readable format
+                if not os.path.exists(settings.storage_directory + '/results.out'):
+                    open(settings.storage_directory + '/results.out', 'w').close()
+
+                with open(settings.storage_directory + '/results.out', 'a') as f:
+                    f.write(str(thread.history.muts[-1]) + ': ' + str(thread.history.score[-1]))
+
+            else:
+                thread.history.score.append(utilities.lie(thread.history.trajs[-1], thread.history.tops[-1], settings))
         else:   # spoof behavior
             thread.history.score.append(utilities.score_spoof(settings.seq, settings.rmsd_covar, settings))
 

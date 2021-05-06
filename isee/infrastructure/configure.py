@@ -67,7 +67,8 @@ def configure(input_file, user_working_directory=''):
         ts_bonds: typing.Tuple[typing.List[str], typing.List[str], typing.List[float], typing.List[float]] = [[''],[''],[-1],[-1]]
         hmr: bool = False
         min_steps: int = 5000
-        storage_directory: str = '/'
+        storage_directory: str = '/'    # this '/' is removed later in configure
+        dry_distance: float = 8.0
 
         # Initialize charges settings
         initialize_charges: bool = True
@@ -90,8 +91,11 @@ def configure(input_file, user_working_directory=''):
 
         # Linear Interaction Energy parameters
         ts_mask: str = ''
+        lie_mask: str = ''
         lie_alpha: float = 0.18
         lie_beta: float = 0.33
+        lie_dry: bool = True
+        lie_decomposed: bool = False
 
         # Stability model parameters
         stabilitymodel: str = 'ddgunmean'

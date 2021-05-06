@@ -90,6 +90,16 @@ def lie(trajectory, topology, settings):
     Measure and return the linear interaction energy between the atoms in settings.ts_mask and the remainder of the
     system, using the weighting parameters settings.lie_alpha and settings.lie_beta.
 
+    If settings.lie_mask is given in addition to settings.ts_mask, the atoms that are in ts_mask but NOT in lie_mask are
+    stripped out of the trajectory before measuring. This allows parts of the transition state to be ignored for the
+    purposes of calculating a binding free energy.
+
+    Similarly, if settings.lie_dry is True, all the solvent is stripped out of the trajectory before measuring. This can
+    be helpful to reduce noise or autocorrelation associated with ultimately irrelevant solvent interactions.
+
+    Finally, if settings.lie_decompose is True, then rather than returning a single float for the calculated energy, the
+    average VDW and electronic components (in that order and not multiplied by alpha or beta) are returned as a list.
+
     Parameters
     ----------
     trajectory : str
@@ -109,10 +119,43 @@ def lie(trajectory, topology, settings):
     # Load trajectory
     traj = pytraj.iterload(trajectory, topology)
 
-    # Compute LIE
-    lie_temp = pytraj.energy_analysis.lie(traj, mask=settings.ts_mask)
+    # Remove atoms that are in ts_mask but not in lie_mask (if we have an lie_mask); also remove solvent if dry_lie
+    if settings.lie_mask or settings.dry_lie:
+        # Get atom indices to remove; for some reason these indices end up being off by one for strip commands
+        diff = []
+        if settings.lie_mask:
+            diff += list(traj.top.select(settings.ts_mask + ' & !(' + settings.lie_mask + ')'))
+        if settings.lie_dry:
+            diff += list(traj.top.select(':WAT'))
+
+        if diff:
+            # Remove atoms in diff from topology w/ parmed
+            parmed_top = parmed.load_file(topology)
+            action = parmed.tools.actions.strip(parmed_top, '@' + ','.join([str(item + 1) for item in diff]))
+            action.execute()
+            action = parmed.tools.actions.setMolecules(parmed_top)
+            action.execute()
+
+            # Save the topology file with the new bonds
+            parmed_top.write_parm(topology + '.temp.prmtop')
+
+            # Remove atoms in diff from coordinates w/ pytraj
+            ptraj = traj.strip('@' + ','.join([str(item + 1) for item in diff]))
+            pytraj.write_traj(trajectory + '.temp.nc', ptraj, overwrite=True)
+
+            # Load new pytraj "traj" object using these new temporary files
+            traj = pytraj.iterload(trajectory + '.temp.nc', topology + '.temp.prmtop')
+
+            # Remove temporary files
+            os.remove(trajectory + '.temp.nc')
+            os.remove(topology + '.temp.prmtop')
+
+    # Compute LIE from whole trajectory at once
+    lie_temp = pytraj.energy_analysis.lie(traj, mask=settings.ts_mask, options='cutelec 8 cutvdw 8')
     EEL = lie_temp['LIE[EELEC]']
     VDW = lie_temp['LIE[EVDW]']
+    # print('EEL: ' + str(numpy.mean(EEL)))
+    # print('VDW: ' + str(numpy.mean(VDW)))
 
     ## Deprecated version. Pytraj has a bug where there's a limit of ~500 calls to pytraj.energy_analysis.lie before it
     ## crashes; there's a workaround on GitHub here, supposedly:
@@ -128,7 +171,12 @@ def lie(trajectory, topology, settings):
     #     i += 1
     #     update_progress(i / traj.n_frames, 'LIE')
 
-    return settings.lie_alpha * numpy.mean(VDW) + settings.lie_beta * numpy.mean(EEL)
+    # Apply appropriate weights to each term and return
+    # print([settings.lie_alpha * VDW[i] + settings.lie_beta * EEL[i] for i in range(len(VDW))])    # return as list
+    if not settings.lie_decomposed:
+        return settings.lie_alpha * numpy.mean(VDW) + settings.lie_beta * numpy.mean(EEL)   # return as mean
+    else:
+        return [numpy.mean(VDW), numpy.mean(EEL)]
 
 
 def mutate(coords, topology, mutation, name, settings, titrations=[]):
@@ -459,7 +507,7 @@ def add_ts_bonds(top, settings):
     temp_ts_bonds = copy.copy(settings.ts_bonds)
     settings.ts_bonds = ([':260@OE2', ':443@O4',  ':443@O4', ':442@N1'],
                          [':443@H4O', ':443@H4O', ':442@C1', ':442@C1'],
-                         [1000,       1000,       400,       400],
+                         [400,       400,       400,       400],
                          [1.27,       1.23,       1.9,       2.4])
     ## KLUDGE KLUDGE KLUDGE ##
 
@@ -659,7 +707,9 @@ def score_spoof(seq, correl, settings):
 def strip_and_store(traj, top, settings):
     """
     Strip water (':WAT') out of the given trajectory and topology files and store the "dry" versions in
-    settings.storage_directory.
+    settings.storage_directory. Water molecules within settings.dry_distance of non-solvent atoms other than Na+ or Cl-
+    are retained (none if dry_distance is 0). These distances are measured relative to the coordinates in the last frame
+    of traj.
 
     The files are named the same as the input files, except for '_dry' inserted just before the file extension.
 
@@ -674,7 +724,10 @@ def strip_and_store(traj, top, settings):
 
     Returns
     -------
-    None
+    dry_traj :
+        Path to dry, stored trajectory file
+    dry_top :
+        Path to dry, stored topology file
 
     """
 
@@ -683,17 +736,23 @@ def strip_and_store(traj, top, settings):
 
     # Trajectory
     ptraj = pytraj.iterload(traj, top)
-    ptraj = pytraj.strip(ptraj, ':WAT')
+    ptraj.top.set_reference(ptraj[-1])
+    ptraj = pytraj.strip(ptraj, ':WAT & (!:WAT,Na+,Cl-)>' + str(settings.dry_distance))
     dry_traj_name = traj[:traj.rindex('.')] + '_dry' + traj[traj.rindex('.'):]  # insert '_dry'
-    dry_traj_name = dry_traj_name[traj.rindex('/') + 1:]                        # remove path, leaving only filename
+    if '/' in dry_traj_name:
+        dry_traj_name = dry_traj_name[traj.rindex('/') + 1:]                    # remove path, leaving only filename
     pytraj.write_traj(settings.storage_directory + '/' + dry_traj_name, ptraj)  # save it to storage
 
     # Topology
     ptop = pytraj.load_topology(top)
-    ptop = pytraj.strip(ptop, ':WAT')
+    ptop.top.set_reference(ptraj[-1])
+    ptop = pytraj.strip(pop, ':WAT & (!:WAT,Na+,Cl-)>' + str(settings.dry_distance))
     dry_top_name = top[:top.rindex('.')] + '_dry' + top[top.rindex('.'):]       # insert '_dry'
-    dry_top_name = dry_top_name[traj.rindex('/') + 1:]                          # remove path, leaving only filename
+    if '/' in dry_top_name:
+        dry_top_name = dry_top_name[traj.rindex('/') + 1:]                      # remove path, leaving only filename
     pytraj.write_parm(settings.storage_directory + '/' + dry_top_name, ptop)    # save it to storage
+
+    return settings.storage_directory + '/' + dry_traj_name, settings.storage_directory + '/' + dry_top_name
 
 
 if __name__ == '__main__':

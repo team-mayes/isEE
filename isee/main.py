@@ -21,8 +21,8 @@ class Thread(object):
     """
     Object representing a series of simulations and containing the relevant information to define its current state.
 
-    Threads represent the level on which ATESA is parallelized. This flexible object is used for every type of job
-    performed by ATESA.
+    Threads represent the level on which isEE is parallelized. This flexible object is used for every type of job
+    performed by isEE.
 
     Parameters
     ----------
@@ -157,7 +157,7 @@ def handle_loop_exception(running, exception, settings):
     Parameters
     ----------
     running : list
-        List of Thread objects that are currently running. These are the threads that will be canceled if the ATESA run
+        List of Thread objects that are currently running. These are the threads that will be canceled if the isEE run
         cannot be rescued.
     exception : Exception
         The exception that triggered calling this function
@@ -180,7 +180,7 @@ def handle_loop_exception(running, exception, settings):
             print('\nEncountered an additional exception while attempting to cancel a job: ' + str(little_e) +
                   '\nIgnoring and continuing...')
 
-    print('Job cancellation complete, ATESA is now shutting down. The full exception that triggered this was: ')
+    print('Job cancellation complete, isEE is now shutting down. The full exception that triggered this was: ')
 
     raise exception
 
