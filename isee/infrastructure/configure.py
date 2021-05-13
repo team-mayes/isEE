@@ -69,6 +69,7 @@ def configure(input_file, user_working_directory=''):
         min_steps: int = 5000
         storage_directory: str = '/'    # this '/' is removed later in configure
         dry_distance: float = 8.0
+        rosetta_mutate: bool = False
 
         # Initialize charges settings
         initialize_charges: bool = True
@@ -88,6 +89,8 @@ def configure(input_file, user_working_directory=''):
         # For algorithm = 'monte_carlo'
         max_plurality: int = 3
         plural_penalty: float = 1
+        skip_wt: bool = False
+        shared_history_file: str = ''
 
         # Linear Interaction Energy parameters
         ts_mask: str = ''

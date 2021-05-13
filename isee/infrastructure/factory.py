@@ -4,6 +4,7 @@ Factory script for obtaining the desired interfaces from the various interface s
 
 from isee import jobtype
 from isee import algorithm
+from isee import stabilitymodel
 from isee.infrastructure import mdengine
 from isee.infrastructure import batchsystem
 from isee.infrastructure import taskmanager
@@ -161,7 +162,8 @@ def stabilitymodel_factory(stabilitymodel_toolkit):
 
     stabilitymodel_toolkit = stabilitymodel_toolkit.lower()
 
-    stabilitymodel_toolkits = {'ddgunmean': stabilitymodel.DDGunMean()}
+    stabilitymodel_toolkits = {'ddgunmean': stabilitymodel.DDGunMean(),
+                               'ddgun3d': stabilitymodel.DDGun3D()}
 
     if stabilitymodel_toolkit not in stabilitymodel_toolkits.keys():
         raise ValueError('unsupported StabilityModel name: ' + stabilitymodel_toolkit)

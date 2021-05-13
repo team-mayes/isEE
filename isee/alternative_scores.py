@@ -10,6 +10,7 @@ import pickle
 import pytraj
 import mdtraj
 import argparse
+import glob
 import isee.utilities
 
 def ts_bond_energy(traj, top):
@@ -58,6 +59,8 @@ if __name__ == "__main__":
         settings = pickle.load(open('settings.pkl', 'rb'))
     else:
         settings = argparse.Namespace()
+        settings.lie_dry = True
+        settings.lie_decomposed = True
         settings.ts_mask = ':442,443'
         settings.lie_mask = ':442 | :443@O4,H4O'
         settings.lie_alpha = 0.4 #0.18
@@ -65,11 +68,18 @@ if __name__ == "__main__":
     # print('ts_bond_energy: ' + ts_bond_energy(traj, top))
     # print('mmpbgbsa: ' + mmpbgbsa(traj, top))
 
-    traj = '/Users/tburgin/Documents/PycharmProjects/isEE/reactants/equil.rst7_64ASP_394ALA_386SER_dry.nc' # sys.argv[1]
-    top = '/Users/tburgin/Documents/PycharmProjects/isEE/reactants/equil.rst7_64ASP_394ALA_386SER_tleap_dry.prmtop' # sys.argv[2]
+    for file in glob.glob('../5steps/*.nc'):
+        traj = file
+        top = traj.replace('_dry.nc', '_tleap_dry.prmtop').replace('../5steps/', '../5steps/ic_') # sys.argv[2]
+        print(traj)
+        print(top)
+        print('partial_lie: ' + str(partial_lie(traj, top, settings)))
 
-    print('reactants')
-    print('partial_lie (M5): ' + str(partial_lie(traj, top, settings)))
+    # traj = '/Users/tburgin/Documents/PycharmProjects/isEE/reactants/equil.rst7_64ASP_394ALA_386SER_dry.nc' # sys.argv[1]
+    # top = '/Users/tburgin/Documents/PycharmProjects/isEE/reactants/equil.rst7_64ASP_394ALA_386SER_tleap_dry.prmtop' # sys.argv[2]
+
+    # print('reactants')
+    # print('partial_lie (M5): ' + str(partial_lie(traj, top, settings)))
 
     # traj = '/Users/tburgin/Documents/PycharmProjects/isEE/equil.rst7_WT_dry.nc' # sys.argv[1]
     # top = '/Users/tburgin/Documents/PycharmProjects/isEE/ic_equil.rst7_WT_tleap_dry.prmtop' # sys.argv[2]

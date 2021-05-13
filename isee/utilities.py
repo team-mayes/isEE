@@ -19,7 +19,7 @@ from simtk.openmm.app import *
 from simtk.openmm import *
 from simtk.unit import *
 from isee.initialize_charges import set_charges
-from main import Thread
+# from main import Thread
 
 # Two different ways to import tleap depending on I think paprika version
 try:
@@ -119,8 +119,8 @@ def lie(trajectory, topology, settings):
     # Load trajectory
     traj = pytraj.iterload(trajectory, topology)
 
-    # Remove atoms that are in ts_mask but not in lie_mask (if we have an lie_mask); also remove solvent if dry_lie
-    if settings.lie_mask or settings.dry_lie:
+    # Remove atoms that are in ts_mask but not in lie_mask (if we have an lie_mask); also remove solvent if lie_dry
+    if settings.lie_mask or settings.lie_dry:
         # Get atom indices to remove; for some reason these indices end up being off by one for strip commands
         diff = []
         if settings.lie_mask:
@@ -144,7 +144,7 @@ def lie(trajectory, topology, settings):
             pytraj.write_traj(trajectory + '.temp.nc', ptraj, overwrite=True)
 
             # Load new pytraj "traj" object using these new temporary files
-            traj = pytraj.iterload(trajectory + '.temp.nc', topology + '.temp.prmtop')
+            traj = pytraj.load(trajectory + '.temp.nc', topology + '.temp.prmtop')
 
             # Remove temporary files
             os.remove(trajectory + '.temp.nc')
@@ -172,11 +172,11 @@ def lie(trajectory, topology, settings):
     #     update_progress(i / traj.n_frames, 'LIE')
 
     # Apply appropriate weights to each term and return
-    # print([settings.lie_alpha * VDW[i] + settings.lie_beta * EEL[i] for i in range(len(VDW))])    # return as list
+    # return [list(VDW), list(EEL)]    # return as list
     if not settings.lie_decomposed:
-        return settings.lie_alpha * numpy.mean(VDW) + settings.lie_beta * numpy.mean(EEL)   # return as mean
+        return settings.lie_alpha * numpy.mean(VDW) + settings.lie_beta * numpy.mean(EEL)   # return as weighted, summed mean
     else:
-        return [numpy.mean(VDW), numpy.mean(EEL)]
+        return [numpy.mean(VDW), numpy.mean(EEL)]   # return as unweighted raw means
 
 
 def mutate(coords, topology, mutation, name, settings, titrations=[]):
@@ -346,10 +346,109 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
                 ' HIP ', ' HIS ').replace(
                 ' HID ', ' HIS ').replace(
                 ' HIE ', ' HIS '), end='')
+    pdb_to_modify = name + '_prot.pdb'
+
+    # Implement Rosetta mutator, if desired
+    if settings.rosetta_mutate:
+        import pyrosetta
+        import rosetta
+        from pyrosetta import standard_packer_task
+        from pyrosetta import pose_from_file
+        from pyrosetta import Pose
+        from pyrosetta import create_score_function
+        from rosetta.utility import vector1_bool
+        from rosetta.core.chemical import aa_from_oneletter_code
+        from rosetta.protocols.minimization_packing import PackRotamersMover
+        from rosetta.core.pose import PDBInfo
+
+        def mutate_residue(pose, mutant_position, mutant_aa,
+                           pack_radius=0.0, pack_scorefxn=''):
+            """
+            Replaces the residue at  <mutant_position>  in  <pose>  with  <mutant_aa>
+                and repack any residues within  <pack_radius>  Angstroms of the mutating
+                residue's center (nbr_atom) using  <pack_scorefxn>
+            note: <mutant_aa>  is the single letter name for the desired ResidueType
+
+            example:
+                mutate_residue(pose,30,A)
+            See also:
+                Pose
+                PackRotamersMover
+                MutateResidue
+                pose_from_sequence
+            """
+            #### a MutateResidue Mover exists similar to this except it does not pack
+            ####    the area around the mutant residue (no pack_radius feature)
+            # mutator = MutateResidue( mutant_position , mutant_aa )
+            # mutator.apply( test_pose )
+            #
+            # Code adapted by Tucker Burgin from Evan H. Baugh, in turn adapted from Sid Chaudhury.
+
+            if pose.is_fullatom() == False:
+                IOError('mutate_residue only works with fullatom poses')
+
+            test_pose = Pose()
+            test_pose.assign(pose)
+
+            # create a beta_nov16 scorefxn by default (changes to this may require change to pyrosetta.init call)
+            if not pack_scorefxn:
+                pack_scorefxn = create_score_function('beta_nov16')
+
+            task = standard_packer_task(test_pose)
+
+            aa_bool = rosetta.utility.vector1_bool()
+            mutant_aa = aa_from_oneletter_code(mutant_aa)
+
+            for i in range(1, 21):
+                aa_bool.append(i == mutant_aa)
+
+            task.nonconst_residue_task(mutant_position).restrict_absent_canonical_aas(aa_bool)
+
+            # prevent residues from packing by setting the per-residue "options" of the PackerTask
+            center = pose.residue(mutant_position).nbr_atom_xyz()
+            for i in range(1, pose.total_residue() + 1):
+                # only pack the mutating residue and any within the pack_radius
+                if not i == mutant_position or center.distance_squared(
+                        test_pose.residue(i).nbr_atom_xyz()) > pack_radius ** 2:
+                    task.nonconst_residue_task(i).prevent_repacking()
+
+            # apply the mutation and pack nearby residues
+            packer = PackRotamersMover(pack_scorefxn, task)
+            packer.apply(test_pose)
+
+            return test_pose
+
+        def convert_3_1(resname):
+            # Helper function to convert three-letter residue names to one-letter code
+            all_resnames = [['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA',
+                             'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP', 'GLH', 'ASH', 'HIP', 'HIE', 'HID', 'CYX',
+                             'CYM', 'HYP'],
+                            ['R', 'H', 'K', 'D', 'E', 'S', 'T', 'N', 'Q', 'C', 'G', 'P', 'A', 'V', 'I', 'L', 'M', 'F',
+                             'Y', 'W', 'E', 'D', 'H', 'H', 'H', 'C', 'C', 'P']]
+
+            try:
+                result = all_resnames[1][all_resnames[0].index(resname.upper())]
+            except ValueError:
+                raise RuntimeError('got unknown residue name: ' + resname)
+
+            return result
+
+        pyrosetta.init('-corrections::beta_nov16')  # initialize with corrections for beta_nov16 weights
+        opt = pyrosetta.rosetta.core.import_pose.ImportPoseOptions()    # initialize pose options object
+        opt.set_keep_input_protonation_state(True)                      # don't try to protonate
+        opt.set_ignore_zero_occupancy(False)                            # don't know what this does, honestly
+        mypose = pose_from_file(name + '_prot.pdb', opt, False, pyrosetta.rosetta.core.import_pose.PDB_file)    # load pdb file
+        for mut in mutation:        # apply each mutation
+            resid = mut[:-3]
+            target = convert_3_1(mut[-3:])
+            mypose = mutate_residue(mypose, resid, target)  # here's where the actual mutation is performed
+        pyrosetta.rosetta.core.io.pdb.dump_pdb(mypose, name + '_rosetta.pdb')   # write output to a new .pdb file
+        pdb_to_modify = name + '_rosetta.pdb'   # set the output from this block as the input for the next one
+
     with open(name + '_mutated.pdb', 'w') as f:
         patterns = [re.compile('\s+[A-Z0-9]+\s+[A-Z]{3}\s+' + mutant[:-3] + '\s+') for mutant in mutation if mutant]
-        for line in open(name + '_prot.pdb', 'r').readlines():
-            if patterns and not all(pattern.findall(line) == [] for pattern in patterns):
+        for line in open(pdb_to_modify, 'r').readlines():
+            if not settings.rosetta_mutate and patterns and not all(pattern.findall(line) == [] for pattern in patterns):
                 pat_index = 0
                 for pattern in patterns:
                     try:
@@ -507,7 +606,7 @@ def add_ts_bonds(top, settings):
     temp_ts_bonds = copy.copy(settings.ts_bonds)
     settings.ts_bonds = ([':260@OE2', ':443@O4',  ':443@O4', ':442@N1'],
                          [':443@H4O', ':443@H4O', ':442@C1', ':442@C1'],
-                         [400,       400,       400,       400],
+                         [200,        200,        200,       200],
                          [1.27,       1.23,       1.9,       2.4])
     ## KLUDGE KLUDGE KLUDGE ##
 
@@ -736,8 +835,9 @@ def strip_and_store(traj, top, settings):
 
     # Trajectory
     ptraj = pytraj.iterload(traj, top)
-    ptraj.top.set_reference(ptraj[-1])
-    ptraj = pytraj.strip(ptraj, ':WAT & (!:WAT,Na+,Cl-)>' + str(settings.dry_distance))
+    ptraj_ref_frame = ptraj[-1]     # save this now because the data type of ptraj is changed by strip
+    ptraj.top.set_reference(ptraj_ref_frame)
+    ptraj = pytraj.strip(ptraj, ':WAT & (!:WAT,Na+,Cl-)>:' + str(settings.dry_distance))
     dry_traj_name = traj[:traj.rindex('.')] + '_dry' + traj[traj.rindex('.'):]  # insert '_dry'
     if '/' in dry_traj_name:
         dry_traj_name = dry_traj_name[traj.rindex('/') + 1:]                    # remove path, leaving only filename
@@ -745,8 +845,8 @@ def strip_and_store(traj, top, settings):
 
     # Topology
     ptop = pytraj.load_topology(top)
-    ptop.top.set_reference(ptraj[-1])
-    ptop = pytraj.strip(pop, ':WAT & (!:WAT,Na+,Cl-)>' + str(settings.dry_distance))
+    ptop.set_reference(ptraj_ref_frame)
+    ptop = pytraj.strip(ptop, ':WAT & (!:WAT,Na+,Cl-)>:' + str(settings.dry_distance))
     dry_top_name = top[:top.rindex('.')] + '_dry' + top[top.rindex('.'):]       # insert '_dry'
     if '/' in dry_top_name:
         dry_top_name = dry_top_name[traj.rindex('/') + 1:]                      # remove path, leaving only filename

@@ -40,7 +40,7 @@ class StabilityModel(abc.ABC):
             Path to the reference topology file corresponding to ref_rst
         mutations : list
             List of mutations to apply in the same format as elsewhere in isEE, namely, each item in the list gives the
-            residue index followed by the target residue's one-letter code.
+            residue index followed by the target residue's three-letter code.
 
         Returns
         -------
@@ -69,6 +69,9 @@ class DDGunMean(StabilityModel):
                         ['R', 'H', 'K', 'D', 'E', 'S', 'T', 'N', 'Q', 'C', 'G', 'P', 'A', 'V', 'I', 'L', 'M', 'F', 'Y',
                          'W', 'E', 'D', 'H', 'H', 'H', 'C', 'C', 'P']]
 
+        # Convert to one-letter codes
+        mutations = [mut.replace(mut[-3:], all_resnames[1][all_resnames[0].index(mut[-3:])]) for mut in mutations]
+
         # Convert rst/top files to reference PDB file
         traj = pytraj.iterload(ref_rst, ref_top)                            # load as pytraj trajectory
         traj = pytraj.strip(traj, '!:' + ','.join(all_resnames[0]))         # strip out everything but protein
@@ -90,18 +93,70 @@ class DDGunMean(StabilityModel):
         command = sys.executable + ' /home/tburgin/ddgun/ddgun_3d.py stability.pdb _ stability.muts'    # _ -> all chains   # todo: fix call to ddgun_3d.py
         p = Popen(command.split(), stdin=PIPE, stdout=PIPE, stderr=PIPE)
         output, err = p.communicate()
-        result_3d = numpy.sum([float(item) for item in output.decode().split()[-2].split(',')])
+        try:
+            result_3d = numpy.sum([float(item) for item in output.decode().split()[-2].split(',')])
+        except:
+            raise RuntimeError('unexpected output from ddgun_3d: ' + output.decode() + '\noutput to stderr was: ' + err.decode())
 
         # Call DDGunSeq, store result
         command = sys.executable + ' /home/tburgin/ddgun/ddgun_seq.py stability.fasta stability.muts'    # _ -> all chains   # todo: fix call to ddgun_seq.py
         p = Popen(command.split(), stdin=PIPE, stdout=PIPE, stderr=PIPE)
         output, err = p.communicate()
-        result_seq = numpy.sum([float(item) for item in output.decode().split()[-2].split(',')])
+        try:
+            result_seq = numpy.sum([float(item) for item in output.decode().split()[-2].split(',')])
+        except:
+            raise RuntimeError('unexpected output from ddgun_seq: ' + output.decode() + '\noutput to stderr was: ' + err.decode())
 
         # Take average, return
         return numpy.mean([result_3d, result_seq])
 
+class DDGun3D(StabilityModel):
+    """
+    Adapter class for DDGun3D stability model. Uses a modified version of the code available at:
+    https://github.com/biofold/ddgun.
+
+    """
+
+    def predict(self, ref_rst, ref_top, mutations):
+        # Prepare list to track residue identities
+        all_resnames = [['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA',
+                         'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP', 'GLH', 'ASH', 'HIP', 'HIE', 'HID', 'CYX',
+                         'CYM', 'HYP'],
+                        ['R', 'H', 'K', 'D', 'E', 'S', 'T', 'N', 'Q', 'C', 'G', 'P', 'A', 'V', 'I', 'L', 'M', 'F', 'Y',
+                         'W', 'E', 'D', 'H', 'H', 'H', 'C', 'C', 'P']]
+
+        # Convert to one-letter codes
+        mutations = [mut.replace(mut[-3:], all_resnames[1][all_resnames[0].index(mut[-3:])]) for mut in mutations]
+
+        # Convert rst/top files to reference PDB file
+        traj = pytraj.iterload(ref_rst, ref_top)                            # load as pytraj trajectory
+        traj = pytraj.strip(traj, '!:' + ','.join(all_resnames[0]))         # strip out everything but protein
+        pytraj.write_traj('stability.pdb', traj, 'pdb', overwrite=True)     # write pdb of just protein
+
+        # Prepare FASTA sequence
+        mtraj = mdtraj.load(ref_rst, top=ref_top)
+        seq = [str(atom)[0:3] for atom in mtraj.topology.atoms if (atom.residue.is_protein and (atom.name == 'CA'))]
+        fasta = ''
+        for res in seq:
+            fasta += all_resnames[1][all_resnames[0].index(res)]
+
+        # Write mutations to an input file in the appropriate format for DDGun
+        mutations = [fasta[int(mut[:-1]) - 1] + mut for mut in mutations]   # convert from 123Y to X123Y based on fasta
+        open('stability.muts', 'w').write(','.join(mutations))
+
+        # Call DDGun3D, store result
+        command = sys.executable + ' /home/tburgin/ddgun/ddgun_3d.py stability.pdb _ stability.muts'    # _ -> all chains   # todo: fix call to ddgun_3d.py
+        p = Popen(command.split(), stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        output, err = p.communicate()
+        try:
+            result_3d = numpy.sum([float(item) for item in output.decode().split()[-2].split(',')])
+        except:
+            raise RuntimeError('unexpected output from ddgun_3d: ' + output.decode() + '\noutput to stderr was: ' + err.decode())
+
+        # Take average, return
+        return result_3d
+
 if __name__ == "__main__":
     # For testing only, should never be used
     model = DDGunMean()
-    print(model.predict('data/one_frame.rst7', 'data/TmAfc_D224G_t200.prmtop', ['64D', '394A']))
+    print(model.predict('data/one_frame.rst7', 'data/TmAfc_D224G_t200.prmtop', ['64ASP', '394ALA']))

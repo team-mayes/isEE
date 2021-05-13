@@ -319,7 +319,7 @@ class isEE(JobType):
                     open(settings.storage_directory + '/results.out', 'w').close()
 
                 with open(settings.storage_directory + '/results.out', 'a') as f:
-                    f.write(str(thread.history.muts[-1]) + ': ' + str(thread.history.score[-1]))
+                    f.write(str(thread.history.muts[-1]) + ': ' + str(thread.history.score[-1]) + '\n')
 
             else:
                 thread.history.score.append(utilities.lie(thread.history.trajs[-1], thread.history.tops[-1], settings))
