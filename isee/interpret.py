@@ -34,7 +34,27 @@ def interpret(thread, allthreads, running, settings):
     jobtype = factory.jobtype_factory(settings.job_type)
 
     if not thread.idle:     # only analyze if there's something to analyze, i.e., last step was not idle
-        jobtype.analyze(thread, settings)    # analyze just-completed simulation
+        okay = jobtype.analyze(thread, settings)    # analyze just-completed simulation
+        if not okay:    # simulation did not work for whatever reason
+            try:
+                null = thread.consec_fails
+            except AttributeError:  # for backwards compatibility with older versions that lacked this attribute
+                thread.consec_fails = 0
+            if thread.consec_fails < settings.resubmit_on_failure:
+                thread.consec_fails += 1
+                file = thread.history.trajs[-1][0].replace('.nc', '.slurm')     # todo: kludge, generalize/cleanup
+                taskmanager = factory.taskmanager_factory(settings.task_manager)
+                thread.jobids[-1] = (taskmanager.submit_batch(file, settings))  # replace last jobid with new job
+                return False, running   # exit without proceeding to termination
+            else:
+                raise RuntimeError('jobtype.analyze failed for thread with most recent trajectory file: ' +
+                                   thread.history.trajs[-1][0] + '\nThe number of consecutive failures exceeded the'
+                                   ' resubmit_on_failure setting (' + str(settings.resubmit_on_failure) +  '), '
+                                   'so exiting.')
+        else:   # this else not strictly necessary (if not okay always terminates), but added for clarity
+            thread.consec_fails = 0
+
+    thread.moves_this_time += 1     # after analysis, increment count of moves this thread has made
 
     termination = jobtype.algorithm(thread, allthreads, settings)   # query algorithm to decide next move
 

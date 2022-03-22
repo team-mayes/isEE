@@ -6,10 +6,12 @@ Thread, passing them to a task manager to submit them, and updating the list of 
 import jinja2
 import os
 import sys
+import pickle
+import shutil
 import warnings
 from isee.infrastructure import factory
 
-def process(thread, running, settings, inp_override=''):
+def process(thread, running, allthreads, settings, inp_override=''):
     """
     The main function of process.py. Reads the thread to identify the next step, then builds and submits the batch
     file(s) as needed.
@@ -20,6 +22,8 @@ def process(thread, running, settings, inp_override=''):
         The Thread object on which to act
     running : list
         The list of currently running threads, which will be updated as needed
+    allthreads : list
+        List of all extant threads, running or not
     settings : argparse.Namespace
         Settings namespace object
     inp_override : str
@@ -92,6 +96,8 @@ def process(thread, running, settings, inp_override=''):
                           'is a problem for you, please raise an issue on GitHub detailing your use-case.')
             thread.terminated = True
             return running
+        else:
+            raise e
 
     batchfiles.append(newfilename)
     jobtype.update_history(thread, settings, **these_kwargs)
@@ -101,6 +107,12 @@ def process(thread, running, settings, inp_override=''):
     thread.jobids = []      # to clear out previous jobids if any exist
     for file in batchfiles:
         thread.jobids.append(taskmanager.submit_batch(file, settings))
+
+    # Dump restart.pkl with updates from process (if allthreads was passed)
+    if allthreads:
+        pickle.dump(allthreads, open('restart.pkl.bak', 'wb'))  # if the code crashes while dumping it could delete the contents of the pkl file
+        if not os.path.getsize('restart.pkl.bak') == 0:
+            shutil.copy('restart.pkl.bak', 'restart.pkl')       # copying after is safer
 
     if thread not in running:
         running.append(thread)

@@ -173,7 +173,8 @@ class JobType(abc.ABC):
     @abc.abstractmethod
     def analyze(self, thread, settings):
         """
-        Perform necessary analysis of a completed simulation step and store results as appropriate into thread.history
+        Perform necessary analysis of a completed simulation step and store results as appropriate into thread.history.
+        If the simulation did not apparently succeed for whatever reason, analyze returns False and terminates.
 
         Parameters
         ----------
@@ -184,7 +185,8 @@ class JobType(abc.ABC):
 
         Returns
         -------
-        None
+        okay : bool
+            True if the simulation went okay, false if it needs to be redone or skipped
 
         """
 
@@ -310,8 +312,14 @@ class isEE(JobType):
 
     def analyze(self, thread, settings):
         if not settings.SPOOF:  # default behavior
+            if not os.path.exists(thread.history.trajs[-1][0]) or pytraj.iterload(thread.history.trajs[-1][0], thread.history.tops[-1]).n_frames == 0:     # if the simulation didn't produce a trajectory
+                return False
             if settings.storage_directory:  # move a 'dry' copy to storage, if we have a storage directory
-                dry_traj, dry_top = utilities.strip_and_store(thread.history.trajs[-1][0], thread.history.tops[-1], settings)   # I honestly have no idea why thread.history.trajs[-1] is a list here when it was a string just before?
+                try:
+                    dry_traj, dry_top = utilities.strip_and_store(thread.history.trajs[-1][0], thread.history.tops[-1], settings)   # I honestly have no idea why thread.history.trajs[-1] is a list here when it was a string just before?
+                except:
+                    raise RuntimeError('strip_and_store failed with files: ' + thread.history.trajs[-1][0] + ' and ' +
+                                       thread.history.tops[-1])
                 thread.history.score.append(utilities.lie(dry_traj, dry_top, settings))
 
                 # Write results in a human-readable format
@@ -325,6 +333,8 @@ class isEE(JobType):
                 thread.history.score.append(utilities.lie(thread.history.trajs[-1], thread.history.tops[-1], settings))
         else:   # spoof behavior
             thread.history.score.append(utilities.score_spoof(settings.seq, settings.rmsd_covar, settings))
+
+        return True
 
     def algorithm(self, thread, allthreads, settings):
         # Get next mutation to apply from the desired algorithm, or else terminate
@@ -349,10 +359,6 @@ class isEE(JobType):
             thread.terminated = True
             return False        # False: do not globally terminate
 
-        # If we get here, we have a new mutant (or WT) to direct the thread to build and simulate
-        thread.history.muts.append(next_step)
-        thread.history.timestamps.append(time.time())
-
         # Perform desired mutation
         # todo: implement possibility of mutating using something other than initial coordinates/topology as a base?
         if '/' in settings.init_topology:   # todo: this shouldn't be necessary because it should already be done in main.init_threads
@@ -369,6 +375,8 @@ class isEE(JobType):
         # Update history and return
         thread.history.inpcrd.append(new_inpcrd)
         thread.history.tops.append(new_top)
+        thread.history.muts.append(next_step)
+        thread.history.timestamps.append(time.time())
         thread.suffix += 1
 
         if not thread.history.trajs:    # if this is the first step in this thread
@@ -377,6 +385,16 @@ class isEE(JobType):
             thread.history.muts = [thread.history.muts[-1]]
             thread.history.timestamps = [thread.history.timestamps[-1]]
             thread.suffix = 0
+
+        # Update history file so other threads can see what this one is up to
+        this_algorithm.build_algorithm_history(allthreads, settings)
+
+        # Check thread-level termination criteria to see if thread.terminated should be True
+        # Do this last so that thread can be restarted without repeating previous step
+        if settings.max_steps_per_thread:
+            if thread.moves_this_time >= settings.max_steps_per_thread:
+                thread.terminated = True
+                return False    # False: do not globally terminate
 
         return False    # False: do not terminate
 

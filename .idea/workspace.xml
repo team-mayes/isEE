@@ -2,112 +2,27 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="79413d0a-9e44-48d3-8905-be180cdeb6bd" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/isee/infrastructure/configure.py" afterPath="$PROJECT_DIR$/isee/infrastructure/configure.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/isee/initialize_charges.py" afterPath="$PROJECT_DIR$/isee/initialize_charges.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/isee/jobtype.py" afterPath="$PROJECT_DIR$/isee/jobtype.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/isee/main.py" afterPath="$PROJECT_DIR$/isee/main.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/isee/utilities.py" afterPath="$PROJECT_DIR$/isee/utilities.py" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/isee/infrastructure/configure.py" beforeDir="false" afterPath="$PROJECT_DIR$/isee/infrastructure/configure.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/isee/utilities.py" beforeDir="false" afterPath="$PROJECT_DIR$/isee/utilities.py" afterDir="false" />
     </list>
-    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
-    <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="CoverageDataManager">
-    <SUITE FILE_PATH="coverage/isEE$algorithm.coverage" NAME="algorithm Coverage Results" MODIFIED="1604070020718" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/isee" />
+    <SUITE FILE_PATH="coverage/isEE$predictor_clean.coverage" NAME="predictor_clean Coverage Results" MODIFIED="1629242462149" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/Downloads" />
+    <SUITE FILE_PATH="coverage/isEE$algorithm.coverage" NAME="algorithm Coverage Results" MODIFIED="1629738208998" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/isee" />
+    <SUITE FILE_PATH="coverage/isEE$alternative_scores.coverage" NAME="alternative_scores Coverage Results" MODIFIED="1622299229499" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/isee" />
     <SUITE FILE_PATH="coverage/isEE$initialize_charges.coverage" NAME="initialize_charges Coverage Results" MODIFIED="1613771148290" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/isee" />
-    <SUITE FILE_PATH="coverage/isEE$utilities.coverage" NAME="utilities Coverage Results" MODIFIED="1605892937186" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/isee" />
-  </component>
-  <component name="FileEditorManager">
-    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="main.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/isee/main.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="246">
-              <caret line="266" column="28" lean-forward="false" selection-start-line="266" selection-start-column="28" selection-end-line="266" selection-end-column="28" />
-              <folding>
-                <element signature="e#319#330#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="initialize_charges.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/isee/initialize_charges.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="105">
-              <caret line="58" column="25" lean-forward="true" selection-start-line="58" selection-start-column="25" selection-end-line="58" selection-end-column="25" />
-              <folding>
-                <element signature="e#223#238#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="utilities.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/isee/utilities.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="245">
-              <caret line="295" column="61" lean-forward="false" selection-start-line="295" selection-start-column="61" selection-end-line="295" selection-end-column="61" />
-              <folding>
-                <element signature="e#182#191#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="algorithm.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/isee/algorithm.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2719">
-              <caret line="400" column="92" lean-forward="false" selection-start-line="400" selection-start-column="92" selection-end-line="400" selection-end-column="92" />
-              <folding>
-                <element signature="e#170#179#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="process.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/isee/process.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="202">
-              <caret line="55" column="40" lean-forward="true" selection-start-line="55" selection-start-column="40" selection-end-line="55" selection-end-column="40" />
-              <folding>
-                <element signature="e#248#261#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="configure.py" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/isee/infrastructure/configure.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="480">
-              <caret line="92" column="53" lean-forward="true" selection-start-line="92" selection-start-column="53" selection-end-line="92" selection-end-column="53" />
-              <folding>
-                <element signature="e#82#97#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="jobtype.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/isee/jobtype.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-667">
-              <caret line="284" column="42" lean-forward="true" selection-start-line="284" selection-start-column="42" selection-end-line="284" selection-end-column="65" />
-              <folding>
-                <element signature="e#164#174#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-    </leaf>
+    <SUITE FILE_PATH="coverage/isEE$predictor.coverage" NAME="predictor Coverage Results" MODIFIED="1630358169045" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/isee" />
+    <SUITE FILE_PATH="coverage/isEE$peak_spreading.coverage" NAME="peak_spreading Coverage Results" MODIFIED="1614714072416" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/isee" />
+    <SUITE FILE_PATH="coverage/isEE$isee_titrate.coverage" NAME="isee_titrate Coverage Results" MODIFIED="1619192765397" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/isee" />
+    <SUITE FILE_PATH="coverage/isEE$timeseries_analysis.coverage" NAME="timeseries_analysis Coverage Results" MODIFIED="1620747657009" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/isee" />
+    <SUITE FILE_PATH="coverage/isEE$stabilitymodel.coverage" NAME="stabilitymodel Coverage Results" MODIFIED="1620841723310" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/isee" />
+    <SUITE FILE_PATH="coverage/isEE$utilities.coverage" NAME="utilities Coverage Results" MODIFIED="1618930348982" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/isee" />
+    <SUITE FILE_PATH="coverage/isEE$delete.coverage" NAME="delete Coverage Results" MODIFIED="1628278625742" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/isee" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -118,36 +33,36 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>update</find>
-      <find>jobtype.</find>
-      <find>(None</find>
-      <find>suffix</find>
-      <find>atesa</find>
-      <find>mutate(</find>
-      <find>get_next_step</find>
-      <find>def get_next_step(self, thread, settings):</find>
-      <find>def Excep</find>
-      <find>self.algorithm_history.muts[</find>
-      <find>setBond</find>
-      <find>, 282,</find>
-      <find>len(</find>
-      <find>&gt;= 2</find>
-      <find>394</find>
-      <find>260</find>
-      <find>algorithm_history.score</find>
-      <find>history.muts</find>
-      <find>min_steps</find>
-      <find>gatek</find>
-      <find>reevaluate_idle</find>
-      <find>348</find>
-      <find>algorithm_history</find>
-      <find>build_algorithm_history</find>
-      <find>dump_and_return</find>
+      <find>traj.replace('.nc', '.20ns.nc')</find>
+      <find>strip</find>
+      <find>dump</find>
       <find>parmed</find>
-      <find>base_ind</find>
-      <find>no_unm</find>
-      <find>gatekee</find>
-      <find>unmutated</find>
+      <find>def ana</find>
+      <find>initialize_char</find>
+      <find>def strip</find>
+      <find>initialize_ch</find>
+      <find>rosetta</find>
+      <find>current_type</find>
+      <find>thread.terminated</find>
+      <find>process(</find>
+      <find>moves_this</find>
+      <find>moves_this_time</find>
+      <find>indices</find>
+      <find>tfp</find>
+      <find>subpro</find>
+      <find>subproc</find>
+      <find>sub</find>
+      <find>original_muts</find>
+      <find>mdtraj</find>
+      <find>tfds</find>
+      <find>pickle</find>
+      <find>scipy</find>
+      <find>muts</find>
+      <find>zero-in</find>
+      <find>seed</find>
+      <find>vector</find>
+      <find>trainable=True</find>
+      <find>scores.append(</find>
     </findStrings>
     <replaceStrings>
       <replace>isee</replace>
@@ -160,10 +75,33 @@
       <replace>thread.</replace>
       <replace>self.build_algorithm_history</replace>
       <replace>def get_next_step(self, thread, allthreads, settings):</replace>
+      <replace>covar_score</replace>
+      <replace>feats</replace>
+      <replace>scores</replace>
+      <replace>sigmoid</replace>
+      <replace>single_muts</replace>
+      <replace>HIS</replace>
+      <replace>titrations</replace>
+      <replace>isEE</replace>
+      <replace>titration</replace>
+      <replace>ptraj</replace>
+      <replace>stability_model</replace>
+      <replace>new_name</replace>
+      <replace>muts</replace>
+      <replace>trainable=False</replace>
+      <replace>wt_score =</replace>
     </replaceStrings>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitSEFilterConfiguration">
+    <file-type-list>
+      <filtered-out-file-type name="LOCAL_BRANCH" />
+      <filtered-out-file-type name="REMOTE_BRANCH" />
+      <filtered-out-file-type name="TAG" />
+      <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
+    </file-type-list>
   </component>
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
@@ -177,28 +115,42 @@
         <option value="$USER_HOME$/miniconda3/lib/python3.7/site-packages/parmed/tools/actions.py" />
         <option value="$PROJECT_DIR$/isee/parmed.prmtop" />
         <option value="$PROJECT_DIR$/isee/leap.log" />
-        <option value="$PROJECT_DIR$/isee/test.py" />
         <option value="$PROJECT_DIR$/isee/min.rst7.1" />
         <option value="$PROJECT_DIR$/isee/configure.py" />
-        <option value="$PROJECT_DIR$/isee/__init__.py" />
         <option value="$PROJECT_DIR$/setup.py" />
-        <option value="$PROJECT_DIR$/isee/infrastructure/batchsystem.py" />
         <option value="$PROJECT_DIR$/../../Globus/XSEDE Comet/isee_test/test.py" />
-        <option value="$PROJECT_DIR$/isee/infrastructure/factory.py" />
-        <option value="$PROJECT_DIR$/isee/infrastructure/taskmanager.py" />
         <option value="$PROJECT_DIR$/isee/test_mutated.pdb" />
-        <option value="$PROJECT_DIR$/isee/interpret.py" />
-        <option value="$PROJECT_DIR$/isee/algorithm.py" />
-        <option value="$PROJECT_DIR$/isee/process.py" />
         <option value="$PROJECT_DIR$/.gitignore" />
-        <option value="$PROJECT_DIR$/isee/infrastructure/configure.py" />
-        <option value="$PROJECT_DIR$/isee/initialize_charges.py" />
-        <option value="$PROJECT_DIR$/isee/main.py" />
-        <option value="$PROJECT_DIR$/isee/jobtype.py" />
         <option value="$PROJECT_DIR$/isee/measure_speed.py" />
         <option value="$PROJECT_DIR$/isee/measure_scaling.py" />
         <option value="$PROJECT_DIR$/isee/assess_decorrelation.py" />
+        <option value="$PROJECT_DIR$/isee/peak_spreading.py" />
+        <option value="$PROJECT_DIR$/isee/infrastructure/batchsystem.py" />
+        <option value="$PROJECT_DIR$/isee/analyze_vrand.py" />
+        <option value="$PROJECT_DIR$/isee/test_tleap_min.pdb" />
+        <option value="$PROJECT_DIR$/isee/__init__.py" />
+        <option value="$USER_HOME$/miniconda3/lib/python3.7/site-packages/parmed/amber/_amberparm.py" />
+        <option value="$PROJECT_DIR$/isee/timeseries_analysis.py" />
+        <option value="$PROJECT_DIR$/isee/rosetta_mutate.py" />
+        <option value="$PROJECT_DIR$/isee/stabilitymodel.py" />
         <option value="$PROJECT_DIR$/isee/utilities.py" />
+        <option value="$PROJECT_DIR$/isee/initialize_charges.py" />
+        <option value="$PROJECT_DIR$/isee/isee_titrate.py" />
+        <option value="$PROJECT_DIR$/isee/main.py" />
+        <option value="$PROJECT_DIR$/isee/alternative_scores.py" />
+        <option value="$PROJECT_DIR$/isee/jobtype.py" />
+        <option value="$PROJECT_DIR$/isee/interpret.py" />
+        <option value="$PROJECT_DIR$/isee/infrastructure/taskmanager.py" />
+        <option value="$PROJECT_DIR$/isee/resample.py" />
+        <option value="$PROJECT_DIR$/isee/test.py" />
+        <option value="$PROJECT_DIR$/isee/process.py" />
+        <option value="$PROJECT_DIR$/isee/predictor_clean.py" />
+        <option value="$PROJECT_DIR$/isee/delete.py" />
+        <option value="$USER_HOME$/Downloads/predictor_clean.py" />
+        <option value="$PROJECT_DIR$/isee/infrastructure/factory.py" />
+        <option value="$PROJECT_DIR$/isee/infrastructure/configure.py" />
+        <option value="$PROJECT_DIR$/isee/algorithm.py" />
+        <option value="$PROJECT_DIR$/isee/predictor.py" />
       </list>
     </option>
   </component>
@@ -208,12 +160,13 @@
     <detection-done>true</detection-done>
     <sorting>DEFINITION_ORDER</sorting>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
+  <component name="ProjectFrameBounds">
     <option name="x" value="38" />
     <option name="y" value="23" />
     <option name="width" value="1242" />
     <option name="height" value="777" />
   </component>
+  <component name="ProjectId" id="1xJsTOc4dNriNGzZWelxRP3BSUh" />
   <component name="ProjectInspectionProfilesVisibleTreeState">
     <entry key="Project Default">
       <profile-state>
@@ -287,8 +240,6 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scratches" />
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -316,44 +267,41 @@
             <path>
               <item name="isEE" type="b2602c69:ProjectViewProjectNode" />
               <item name="isEE" type="462c0819:PsiDirectoryNode" />
-              <item name="isee" type="462c0819:PsiDirectoryNode" />
-              <item name="tests" type="462c0819:PsiDirectoryNode" />
+              <item name="repeat1" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
         </subPane>
       </pane>
+      <pane id="Scratches" />
+      <pane id="Scope" />
     </panes>
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="settings.editor.selected.configurable" value="Errors" />
     <property name="run.code.analysis.last.selected.profile" value="pProject Default" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+    <property name="two.files.diff.last.used.file" value="$PROJECT_DIR$/Pokemon Storm Silver_3.dss" />
   </component>
   <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/isee/data" />
+      <recent name="$PROJECT_DIR$/isee" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/isee/data" />
       <recent name="$PROJECT_DIR$/isee/infrastructure" />
     </key>
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/isee" />
-    </key>
   </component>
-  <component name="RunDashboard">
-    <option name="ruleStates">
-      <list>
-        <RuleState>
-          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
-        </RuleState>
-        <RuleState>
-          <option name="name" value="StatusDashboardGroupingRule" />
-        </RuleState>
-      </list>
-    </option>
-  </component>
-  <component name="RunManager" selected="Python.initialize_charges">
+  <component name="RunManager" selected="Python.fix">
     <configuration name="algorithm" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="isEE" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -364,14 +312,39 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="isEE" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/isee/algorithm.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
     </configuration>
-    <configuration name="initialize_charges" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="fix" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="isEE" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/../../DraStic" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/../../DraStic/fix.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="metanetwork" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="isEE" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -382,47 +355,77 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="isEE" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/isee/initialize_charges.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/isee/metanetwork.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
     </configuration>
-    <configuration name="utilities" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="predictor" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="isEE" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="$USER_HOME$/miniconda3/bin/python3.7" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/isee" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/isee/predictor.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="predictor_clean" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="isEE" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/isee" />
-      <option name="IS_MODULE_SDK" value="true" />
+      <option name="WORKING_DIRECTORY" value="$USER_HOME$/Downloads" />
+      <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="isEE" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/isee/utilities.py" />
+      <option name="SCRIPT_NAME" value="$USER_HOME$/Downloads/predictor_clean.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
     </configuration>
-    <list size="3">
-      <item index="0" class="java.lang.String" itemvalue="Python.utilities" />
-      <item index="1" class="java.lang.String" itemvalue="Python.algorithm" />
-      <item index="2" class="java.lang.String" itemvalue="Python.initialize_charges" />
+    <list>
+      <item itemvalue="Python.algorithm" />
+      <item itemvalue="Python.fix" />
+      <item itemvalue="Python.metanetwork" />
+      <item itemvalue="Python.predictor" />
+      <item itemvalue="Python.predictor_clean" />
     </list>
     <recent_temporary>
-      <list size="3">
-        <item index="0" class="java.lang.String" itemvalue="Python.initialize_charges" />
-        <item index="1" class="java.lang.String" itemvalue="Python.utilities" />
-        <item index="2" class="java.lang.String" itemvalue="Python.algorithm" />
+      <list>
+        <item itemvalue="Python.fix" />
+        <item itemvalue="Python.metanetwork" />
+        <item itemvalue="Python.predictor" />
+        <item itemvalue="Python.predictor_clean" />
+        <item itemvalue="Python.algorithm" />
       </list>
     </recent_temporary>
   </component>
-  <component name="ShelveChangesManager" show_recycled="false">
-    <option name="remove_strategy" value="false" />
-  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="79413d0a-9e44-48d3-8905-be180cdeb6bd" name="Default" comment="" />
@@ -443,15 +446,15 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="38" y="23" width="1242" height="777" extended-state="6" />
+    <frame x="38" y="23" width="1242" height="777" extended-state="0" />
     <layout>
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32911393" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
-      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
+      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32911393" sideWeight="0.505" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32911393" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
-      <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.2658228" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32911393" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Python Console" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.2658228" sideWeight="0.49666667" order="8" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32911393" sideWeight="0.495" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32911393" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.23666666" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.28166667" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32911393" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
@@ -462,18 +465,37 @@
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Coverage" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="true" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
     </layout>
+    <layout-to-restore>
+      <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32911393" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
+      <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
+      <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32911393" sideWeight="0.505" order="7" side_tool="true" content_ui="tabs" />
+      <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32911393" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
+      <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.2658228" sideWeight="0.49666667" order="8" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.32911393" sideWeight="0.495" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32911393" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.24833333" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
+      <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32911393" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3994374" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Data View" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
+    </layout-to-restore>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
   </component>
   <component name="UnknownFeatures">
     <option featureType="com.intellij.fileTypeFactory" implementationName="*.log" />
-  </component>
-  <component name="VcsContentAnnotationSettings">
-    <option name="myLimit" value="2678400000" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -485,319 +507,297 @@
         </breakpoint>
       </default-breakpoints>
     </breakpoint-manager>
-    <watches-manager />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/isee/nonprot_orig.mol2" />
-    <entry file="file://$PROJECT_DIR$/isee/nonprot.mol2" />
-    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/parmed/tools/exceptions.py">
+    <entry file="file://$PROJECT_DIR$/isee/test_tleap_min..pka" />
+    <entry file="file://$PROJECT_DIR$/isee/test_conformation.pdb" />
+    <entry file="file://$PROJECT_DIR$/isee/test_tleap_copy.pdb" />
+    <entry file="file://$PROJECT_DIR$/isee/test_tleap_min.pka" />
+    <entry file="file://$PROJECT_DIR$/isee/test_tleap_min.pdb" />
+    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/pdb2pqr/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="153">
-          <caret line="84" column="6" lean-forward="false" selection-start-line="84" selection-start-column="6" selection-end-line="84" selection-end-column="6" />
+        <state relative-caret-position="-738">
+          <caret line="158" column="4" lean-forward="false" selection-start-line="158" selection-start-column="4" selection-end-line="158" selection-end-column="4" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/parmed/tools/argumentlist.py">
+    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/moleculekit/tools/preparation.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="367">
-          <caret line="142" column="65" lean-forward="false" selection-start-line="142" selection-start-column="65" selection-end-line="142" selection-end-column="65" />
+        <state relative-caret-position="147">
+          <caret line="400" column="22" lean-forward="false" selection-start-line="400" selection-start-column="22" selection-end-line="400" selection-end-column="22" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/parmed/amber/mask.py">
+    <entry file="file://$PROJECT_DIR$/isee/test_tleap_min_mutated.pdb" />
+    <entry file="file://$PROJECT_DIR$/test.pdb" />
+    <entry file="file://$PROJECT_DIR$/ic_equil.rst7_WT_tleap_dry.prmtop" />
+    <entry file="file://$PROJECT_DIR$/ic_equil.rst7_WT_tleap_dry.prmtop.temp.prmtop" />
+    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/parmed/amber/_amberparm.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-39">
-          <caret line="57" column="8" lean-forward="false" selection-start-line="57" selection-start-column="8" selection-end-line="57" selection-end-column="8" />
+        <state relative-caret-position="168">
+          <caret line="672" column="0" lean-forward="true" selection-start-line="672" selection-start-column="0" selection-end-line="672" selection-end-column="0" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/isee/parmed.prmtop" />
-    <entry file="file://$PROJECT_DIR$/isee/data/one_frame.rst7">
+    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/pytraj/analysis/c_action/c_action.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-452266">
-          <caret line="1" column="0" lean-forward="false" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/parmed/tools/actions.py">
+    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/pytraj/analysis/energy_analysis.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1635">
-          <caret line="148" column="32" lean-forward="false" selection-start-line="148" selection-start-column="32" selection-end-line="148" selection-end-column="32" />
+        <state relative-caret-position="254">
+          <caret line="218" column="4" lean-forward="false" selection-start-line="218" selection-start-column="4" selection-end-line="218" selection-end-column="4" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/isee/mutated.pdb" />
-    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/parmed/__init__.py">
+    <entry file="file://$PROJECT_DIR$/isee/shared.pkl" />
+    <entry file="file://$PROJECT_DIR$/isee/algorithm_history.pkl" />
+    <entry file="file://$PROJECT_DIR$/isee/rosetta_mutate.py" />
+    <entry file="file://$PROJECT_DIR$/isee/timeseries_analysis.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="158">
-          <caret line="31" column="27" lean-forward="true" selection-start-line="31" selection-start-column="27" selection-end-line="31" selection-end-column="27" />
+        <state relative-caret-position="160">
+          <caret line="63" column="7" lean-forward="true" selection-start-line="63" selection-start-column="7" selection-end-line="63" selection-end-column="7" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/parmed/formats/registry.py">
+    <entry file="file://$PROJECT_DIR$/isee/data/spoof_short_restart.pkl">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-99">
-          <caret line="25" column="0" lean-forward="false" selection-start-line="25" selection-start-column="0" selection-end-line="25" selection-end-column="0" />
+        <state relative-caret-position="-7377">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/isee/boxtop.prmtop" />
-    <entry file="file://$PROJECT_DIR$/isee/mutant.prmtop" />
+    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/pytraj/utils/get_common_objects.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="813">
+          <caret line="295" column="48" lean-forward="false" selection-start-line="295" selection-start-column="48" selection-end-line="295" selection-end-column="48" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/alternative_scores.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="204">
+          <caret line="60" column="77" lean-forward="true" selection-start-line="60" selection-start-column="77" selection-end-line="60" selection-end-column="77" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/infrastructure/taskmanager.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="870">
+          <caret line="61" column="38" lean-forward="false" selection-start-line="61" selection-start-column="38" selection-end-line="61" selection-end-column="38" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/temp.txt" />
+    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/pytraj/all_actions.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-53">
+          <caret line="1446" column="4" lean-forward="false" selection-start-line="1446" selection-start-column="4" selection-end-line="1446" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/pytraj/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="149">
+          <caret line="241" column="35" lean-forward="false" selection-start-line="241" selection-start-column="35" selection-end-line="241" selection-end-column="35" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/tensorflow/python/keras/engine/data_adapter.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="397">
+          <caret line="278" column="13" lean-forward="false" selection-start-line="278" selection-start-column="13" selection-end-line="278" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/resample.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1905">
+          <caret line="133" column="21" lean-forward="false" selection-start-line="133" selection-start-column="21" selection-end-line="133" selection-end-column="21" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/isee/data/TmAfc_D224G_t200.prmtop">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="119">
-          <caret line="119048" column="0" lean-forward="false" selection-start-line="119048" selection-start-column="0" selection-end-line="119048" selection-end-column="20" />
+        <state relative-caret-position="-2071483">
+          <caret line="5075" column="0" lean-forward="false" selection-start-line="5075" selection-start-column="0" selection-end-line="5075" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/data/one_frame.rst7">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="224">
+          <caret line="30164" column="42" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="30176" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/data/resampled_history_incorrect_scores.pkl">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="156">
+          <caret line="12270" column="241" lean-forward="false" selection-start-line="12270" selection-start-column="241" selection-end-line="12270" selection-end-column="241" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/pytraj/utils/context.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="165">
+          <caret line="14" column="20" lean-forward="false" selection-start-line="14" selection-start-column="20" selection-end-line="14" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/mdtraj/formats/prmtop.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-54">
+          <caret line="87" column="4" lean-forward="false" selection-start-line="87" selection-start-column="4" selection-end-line="87" selection-end-column="4" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/isee/test.py" />
-    <entry file="file://$PROJECT_DIR$/isee/min.rst7.1" />
-    <entry file="file://$PROJECT_DIR$/isee/mutant.rst7" />
-    <entry file="file://$PROJECT_DIR$/isee/infrastructure/__init__.py">
+    <entry file="file://$PROJECT_DIR$/isee/infrastructure/mdengine.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        <state relative-caret-position="15">
+          <caret line="29" column="37" lean-forward="true" selection-start-line="29" selection-start-column="37" selection-end-line="29" selection-end-column="37" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/initialize_charges.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="450">
+          <caret line="39" column="20" lean-forward="false" selection-start-line="39" selection-start-column="20" selection-end-line="39" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/isee_titrate.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1116">
+          <caret line="28" column="72" lean-forward="false" selection-start-line="28" selection-start-column="72" selection-end-line="28" selection-end-column="72" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/stabilitymodel.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2370">
+          <caret line="166" column="27" lean-forward="false" selection-start-line="166" selection-start-column="27" selection-end-line="166" selection-end-column="27" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/isee/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="60">
-          <caret line="4" column="0" lean-forward="false" selection-start-line="4" selection-start-column="0" selection-end-line="4" selection-end-column="0" />
-          <folding>
-            <element signature="e#131#149#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../../Globus/XSEDE Comet/isee_test/test.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="174">
-          <caret line="56" column="46" lean-forward="true" selection-start-line="56" selection-start-column="46" selection-end-line="56" selection-end-column="46" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/pytraj/trajectory/c_traj/c_trajout.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/pytraj/io.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-3525">
-          <caret line="15" column="57" lean-forward="true" selection-start-line="15" selection-start-column="57" selection-end-line="15" selection-end-column="57" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/test_nonprot.mol2" />
-    <entry file="file://$PROJECT_DIR$/../isEE_toy/metacovariance.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="182">
-          <caret line="44" column="4" lean-forward="true" selection-start-line="44" selection-start-column="4" selection-end-line="44" selection-end-column="120" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/_version.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/infrastructure/mdengine.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="123">
-          <caret line="19" column="18" lean-forward="false" selection-start-line="19" selection-start-column="18" selection-end-line="19" selection-end-column="18" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/infrastructure/batchsystem.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-226">
-          <caret line="60" column="22" lean-forward="false" selection-start-line="60" selection-start-column="22" selection-end-line="60" selection-end-column="22" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/test_mutated.pdb" />
-    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/paprika/tleap.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="117">
-          <caret line="125" column="8" lean-forward="false" selection-start-line="125" selection-start-column="8" selection-end-line="125" selection-end-column="8" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/leap.log" />
-    <entry file="file://$USER_HOME$/Library/Caches/PyCharm2017.2/python_stubs/1544461976/builtins.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="123">
-          <caret line="896" column="6" lean-forward="false" selection-start-line="896" selection-start-column="6" selection-end-line="896" selection-end-column="6" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/parmed/tinker/topologyobjects.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-5678">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/miniconda3/lib/python3.7/site-packages/parmed/amber/_amberparm.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="6720">
-          <caret line="477" column="41" lean-forward="false" selection-start-line="477" selection-start-column="41" selection-end-line="477" selection-end-column="41" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/tests/test_isee.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/tests/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/infrastructure/taskmanager.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="930">
-          <caret line="65" column="45" lean-forward="false" selection-start-line="65" selection-start-column="45" selection-end-line="65" selection-end-column="45" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/Desktop/atesa_draft_HM1.tex" />
-    <entry file="file://$PROJECT_DIR$/.gitignore">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="419">
-          <caret line="107" column="5" lean-forward="false" selection-start-line="107" selection-start-column="5" selection-end-line="107" selection-end-column="5" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/infrastructure/factory.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="638">
-          <caret line="126" column="27" lean-forward="true" selection-start-line="126" selection-start-column="27" selection-end-line="126" selection-end-column="46" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/interpret.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="428">
-          <caret line="41" column="58" lean-forward="false" selection-start-line="41" selection-start-column="4" selection-end-line="41" selection-end-column="58" />
-          <folding>
-            <element signature="e#248#257#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/setup.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="348">
-          <caret line="47" column="37" lean-forward="false" selection-start-line="47" selection-start-column="37" selection-end-line="47" selection-end-column="37" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/algorithm.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2719">
-          <caret line="400" column="92" lean-forward="false" selection-start-line="400" selection-start-column="92" selection-end-line="400" selection-end-column="92" />
-          <folding>
-            <element signature="e#170#179#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/main.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="246">
-          <caret line="266" column="28" lean-forward="false" selection-start-line="266" selection-start-column="28" selection-end-line="266" selection-end-column="28" />
-          <folding>
-            <element signature="e#319#330#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/process.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="202">
-          <caret line="55" column="40" lean-forward="true" selection-start-line="55" selection-start-column="40" selection-end-line="55" selection-end-column="40" />
-          <folding>
-            <element signature="e#248#261#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/jobtype.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-667">
-          <caret line="284" column="42" lean-forward="true" selection-start-line="284" selection-start-column="42" selection-end-line="284" selection-end-column="65" />
-          <folding>
-            <element signature="e#164#174#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/initialize_charges.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="105">
-          <caret line="58" column="25" lean-forward="true" selection-start-line="58" selection-start-column="25" selection-end-line="58" selection-end-column="25" />
-          <folding>
-            <element signature="e#223#238#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/measure_scaling.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="180">
-          <caret line="12" column="16" lean-forward="true" selection-start-line="12" selection-start-column="16" selection-end-line="12" selection-end-column="16" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/isee/assess_decorrelation.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="90">
-          <caret line="90" column="20" lean-forward="true" selection-start-line="90" selection-start-column="20" selection-end-line="90" selection-end-column="20" />
+        <state relative-caret-position="165">
+          <caret line="11" column="32" lean-forward="false" selection-start-line="11" selection-start-column="32" selection-end-line="11" selection-end-column="32" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/isee/utilities.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="245">
-          <caret line="295" column="61" lean-forward="false" selection-start-line="295" selection-start-column="61" selection-end-line="295" selection-end-column="61" />
+        <state relative-caret-position="69">
+          <caret line="557" column="16" lean-forward="false" selection-start-line="557" selection-start-column="16" selection-end-line="557" selection-end-column="16" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/infrastructure/batchsystem.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="213">
+          <caret line="128" column="10" lean-forward="false" selection-start-line="128" selection-start-column="10" selection-end-line="128" selection-end-column="10" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/main.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="309">
+          <caret line="80" column="30" lean-forward="false" selection-start-line="80" selection-start-column="30" selection-end-line="80" selection-end-column="30" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/delete.py" />
+    <entry file="file://$PROJECT_DIR$/isee/process.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="247">
+          <caret line="70" column="31" lean-forward="true" selection-start-line="70" selection-start-column="31" selection-end-line="70" selection-end-column="31" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/Downloads/predictor_clean.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="795">
+          <caret line="53" column="8" lean-forward="false" selection-start-line="53" selection-start-column="8" selection-end-line="53" selection-end-column="8" />
           <folding>
-            <element signature="e#182#191#0" expanded="true" />
+            <element signature="e#0#9#0" expanded="false" />
+            <element signature="e#12646#15158#0" expanded="false" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/isee/171116_FPA_4NP-Xyl_ff.leaprc">
+    <entry file="file://$PROJECT_DIR$/isee/jobtype.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-121">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        <state relative-caret-position="1104">
+          <caret line="406" column="22" lean-forward="false" selection-start-line="406" selection-start-column="22" selection-end-line="406" selection-end-column="22" />
           <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/interpret.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="323">
+          <caret line="66" column="0" lean-forward="false" selection-start-line="66" selection-start-column="0" selection-end-line="66" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/infrastructure/factory.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="8">
+          <caret line="122" column="14" lean-forward="false" selection-start-line="122" selection-start-column="14" selection-end-line="122" selection-end-column="14" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/algorithm.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="176">
+          <caret line="802" column="67" lean-forward="false" selection-start-line="802" selection-start-column="67" selection-end-line="802" selection-end-column="67" />
+          <folding>
+            <element signature="e#170#179#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/predictor_clean.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="164">
+          <caret line="355" column="8" lean-forward="false" selection-start-line="355" selection-start-column="8" selection-end-line="355" selection-end-column="120" />
+          <folding>
+            <element signature="e#0#9#0" expanded="true" />
+            <element signature="e#5808#10296#0" expanded="false" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/isee/infrastructure/configure.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="480">
-          <caret line="92" column="53" lean-forward="true" selection-start-line="92" selection-start-column="53" selection-end-line="92" selection-end-column="53" />
+        <state relative-caret-position="2165">
+          <caret line="166" column="28" lean-forward="false" selection-start-line="166" selection-start-column="28" selection-end-line="166" selection-end-column="28" />
           <folding>
             <element signature="e#82#97#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/isee/predictor.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="591">
+          <caret line="474" column="27" lean-forward="false" selection-start-line="474" selection-start-column="27" selection-end-line="474" selection-end-column="27" />
+          <folding>
+            <element signature="e#0#9#0" expanded="true" />
+            <element signature="e#7964#12452#0" expanded="false" />
           </folding>
         </state>
       </provider>

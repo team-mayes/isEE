@@ -117,8 +117,9 @@ def main(rst, top):
             break
         ii += 1
 
-    # Call mutate with pkas to apply the changes to the protonation state
-    new_rst, new_top = mutate(rst, top, [], pdbname[:-4], settings, titrations)
+    # Call mutate with titrations to apply the changes to the protonation state
+    with pytraj.utils.context.capture_stdout() as out:  # handy pytraj utility catches C output streams
+        new_rst, new_top = mutate(rst, top, [], pdbname[:-4], settings, titrations)
 
     # Finally, rename files produced by mutate to match filenames that this was called with
     os.rename(new_rst, rst)

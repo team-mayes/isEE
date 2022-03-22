@@ -92,7 +92,7 @@ def main(settings):
     temp_settings.md_engine = 'amber_init_charges'
 
     # Submit job with process
-    running = process(thread, [], temp_settings, inp_override=new_input_file)
+    running = process(thread, [], [], temp_settings, inp_override=new_input_file)
 
     # Use the same loop strategy as in main.main to wait for this job to finish
     while True:
@@ -173,7 +173,7 @@ def main(settings):
         if not res in residues:
             residues.append(res)
             first_index.append(atom_index)
-            get_index_str = ':' + res + '@' + mtop.atom(atom_index).name
+            get_index_str = ':' + res + '@' + mtop.atom(atom_index - 1).name
             get_index_strs.append(get_index_str)
             relative_indices.append(get_index_str)
         else:
@@ -235,12 +235,12 @@ def set_charges(top):
     # First step: load relative_charge_table.pkl file and then calculate indices to produce absolute_charge_table
     relative_charge_table = pickle.load(open('relative_charge_table.pkl', 'rb'))
     evaluated = []
-    pattern = re.compile('\:[0-9]+\@[A-Z0-9]+')
+    pattern = re.compile('\:[0-9]+\@[A-Za-z0-9+-]+')    # supports atom names consisting of numbers, letters, and +/-
     mtop = mdtraj.load_prmtop(top)
     for item in relative_charge_table:
         relative_to = pattern.findall(item[0])[0]
         if not relative_to in [item[0] for item in evaluated]:
-            parsed = relative_to.replace(':', 'resid ').replace('@', ' and name ')
+            parsed = relative_to.replace(':', 'resid ').replace('@', ' and name "') + '"'   # quotes for literal name
             relative_to_index = str(mtop.select(parsed)[0])
         else:
             internal_index = [item[0] for item in evaluated].index(relative_to)

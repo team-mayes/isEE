@@ -136,7 +136,8 @@ def algorithm_factory(algorithm_toolkit):
     algorithm_toolkits = {'script': algorithm.Script(),
                           'covariance_saturation': algorithm.CovarianceSaturation(),
                           'subnetwork_hotspots': algorithm.SubnetworkHotspots(),
-                          'monte_carlo': algorithm.MonteCarlo()}
+                          'monte_carlo': algorithm.MonteCarlo(),
+                          'predictor_guided': algorithm.PredictorGuided()}
 
     if algorithm_toolkit not in algorithm_toolkits.keys():
         raise ValueError('unsupported Algorithm name: ' + algorithm_toolkit)
@@ -144,28 +145,28 @@ def algorithm_factory(algorithm_toolkit):
     return algorithm_toolkits[algorithm_toolkit]
 
 
-def stabilitymodel_factory(stabilitymodel_toolkit):
+def stability_model_factory(stability_model_toolkit):
     """
     Factory function for StabilityModels.
 
     Parameters
     ----------
-    stabilitymodel_toolkit : str
+    stability)model_toolkit : str
         Name of the StabilityModel to invoke
 
     Returns
     -------
-    stabilitymodel : StabilityModel
+    stability_model : StabilityModel
         Instance of a StabilityModel adapter
 
     """
 
-    stabilitymodel_toolkit = stabilitymodel_toolkit.lower()
+    stability_model_toolkit = stability_model_toolkit.lower()
 
-    stabilitymodel_toolkits = {'ddgunmean': stabilitymodel.DDGunMean(),
+    stability_model_toolkits = {'ddgunmean': stabilitymodel.DDGunMean(),
                                'ddgun3d': stabilitymodel.DDGun3D()}
 
-    if stabilitymodel_toolkit not in stabilitymodel_toolkits.keys():
-        raise ValueError('unsupported StabilityModel name: ' + stabilitymodel_toolkit)
+    if stability_model_toolkit not in stability_model_toolkits.keys():
+        raise ValueError('unsupported StabilityModel name: ' + stability_model_toolkit)
 
-    return stabilitymodel_toolkits[stabilitymodel_toolkit]
+    return stability_model_toolkits[stability_model_toolkit]

@@ -1,7 +1,6 @@
 """
 main.py
-Version 2 of Aimless Transition Ensemble Sampling and Analysis refactors the code to make it portable, extensible, and 
-flexible.
+in silico Enzyme Evolution
 
 This script handles the primary loop of building and submitting jobs in independent Threads, using the methods thereof 
 to execute various interfaced/abstracted commands.
@@ -13,7 +12,7 @@ import pickle
 import shutil
 import sys
 import time
-from isee import interpret, process, initialize_charges
+from isee import interpret, process, initialize_charges, utilities
 from isee.infrastructure import factory, configure
 
 
@@ -48,12 +47,14 @@ class Thread(object):
         self.status = 'fresh thread'    # tag for current status of a thread
         self.skip_update = False        # used by restart to resubmit jobs as they were rather than doing the next step
         self.idle = False               # flag for idle thread, to facilitate parallelization of algorithms
+        self.consec_fails = 0           # consecutive failures count
+        self.moves_this_time = 0        # number of moves completed since thread was last started or restarted
 
     # Remember in implementations of Thread methods that 'self' is a thread object, even though they may make calls to
     # methods of other types of objects (that therefore use 'self' to refer to non-Thread objects)
 
-    def process(self, running, settings):
-        return process.process(self, running, settings)
+    def process(self, running, allthreads, settings):
+        return process.process(self, running, allthreads, settings)
 
     def interpret(self, allthreads, running, settings):
         return interpret.interpret(self, allthreads, running, settings)
@@ -107,11 +108,34 @@ def init_threads(settings):
     if settings.restart:
         allthreads = pickle.load(open(settings.working_directory + '/restart.pkl', 'rb'))
         for thread in allthreads:
+            thread.moves_this_time = 0  # reset count of moves since thread last started/restarted
+            thread.consec_fails = 0     # reset count of consecutive failures since last started/restarted
             if not thread.current_type == []:
                 thread.skip_update = True
         if settings.restart_terminated_threads:
             for thread in allthreads:
                 thread.terminated = False
+        # Need to rerun mutate on restarting threads (unless they were doing WT)
+        for thread in allthreads:
+            if not thread.history.muts[-1] == ['WT']:
+                initial_coordinates_to_mutate = settings.initial_coordinates[0]
+                if '/' in initial_coordinates_to_mutate:
+                    initial_coordinates_to_mutate = initial_coordinates_to_mutate[initial_coordinates_to_mutate.rindex('/') + 1:]
+                new_inpcrd, new_top = utilities.mutate(initial_coordinates_to_mutate, settings.init_topology,
+                                                       thread.history.muts[-1], initial_coordinates_to_mutate + '_' +
+                                                       '_'.join(thread.history.muts[-1]), settings)
+                try:
+                    assert thread.history.inpcrd[-1] == new_inpcrd
+                    assert thread.history.tops[-1] == new_top
+                except AssertionError:
+                    raise RuntimeError('Tried to rebuild mutant coordinates and topology for mutation: ' +
+                                       thread.history.muts[-1] + ' but the resulting files did not match the names of '
+                                       'the files in the corresponding thread.\n New filenames:' +
+                                       '\n ' + new_inpcrd +
+                                       '\n ' + new_top +
+                                       'Expected filenames:' +
+                                       '\n ' + thread.history.inpcrd[-1] +
+                                       '\n ' + thread.history.tops[-1])
 
         return allthreads
 
@@ -146,6 +170,9 @@ def init_threads(settings):
         # todo: using these files?
 
         allthreads.append(thread)
+
+    for thread in allthreads:
+        thread.moves_this_time = 0  # reset count of moves since thread last started/restarted
 
     return allthreads
 
@@ -222,6 +249,14 @@ def main(settings):
             raise RuntimeError('Working directory ' + settings.working_directory + ' does not yet exist, but '
                                'restart = True.')
 
+    # if settings.shared_history_file and not settings.restart:
+    #     if os.path.exists(settings.shared_history_file) and settings.overwrite:
+    #         os.remove(settings.shared_history_file)
+    #     elif os.path.exists(settings.shared_history_file):
+    #         raise RuntimeError('the specified shared history file: ' + settings.shared_history_file + ' already exists,'
+    #                            ' but neither overwrite nor restart are set to True. Change the appropriate setting or '
+    #                            'else move or delete the shared history file.')
+
     # Store settings object in the working directory for compatibility with analysis/utility scripts
     if not settings.dont_dump:
         temp_settings = copy.deepcopy(settings)  # initialize temporary copy of settings to modify
@@ -271,7 +306,7 @@ def main(settings):
         for thread in allthreads:
             if not thread.history.trajs:    # if there have been no steps in this thread yet
                 jobtype.algorithm(thread, allthreads, settings)
-            running = thread.process(running, settings)
+            running = thread.process(running, allthreads, settings)
     except Exception as e:
         if settings.restart:
             print('The following error occurred while attempting to initialize threads from restart.pkl. It may be '
@@ -287,11 +322,11 @@ def main(settings):
                     termination_criterion, running = thread.interpret(allthreads, running, settings)
                     if termination_criterion:   # global termination
                         for thread in running:    # todo: should I replace this with something to finish up running jobs and just block submission of new ones?
-                            for job_index in range(len(thread.current_type)):
+                            for job_index in range(len(thread.jobids)):
                                 thread.cancel_job(job_index, settings)
                         running = []
                         break
-                    running = thread.process(running, settings)
+                    running = thread.process(running, allthreads, settings)
                 else:
                     time.sleep(30)  # to prevent too-frequent calls to batch system by thread.gatekeeper
 

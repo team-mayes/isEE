@@ -62,7 +62,7 @@ def configure(input_file, user_working_directory=''):
         path_to_templates: str = os.path.dirname(os.path.realpath(__file__)) + '/data/templates'
 
         # Settings for isEE jobtype
-        degeneracy: int = 0
+        degeneracy: int = 0     # todo: is this working?
         initial_coordinates: typing.List[str] = ['']    # todo: in isEE as currently written, each thread has to have the same initial coordinates, so either change that or change this
         ts_bonds: typing.Tuple[typing.List[str], typing.List[str], typing.List[float], typing.List[float]] = [[''],[''],[-1],[-1]]
         hmr: bool = False
@@ -70,6 +70,7 @@ def configure(input_file, user_working_directory=''):
         storage_directory: str = '/'    # this '/' is removed later in configure
         dry_distance: float = 8.0
         rosetta_mutate: bool = False
+        treat_as_protein: typing.List[str] = ['']  # list of strings of non-standard resnames to treat as protein
 
         # Initialize charges settings
         initialize_charges: bool = True
@@ -80,17 +81,20 @@ def configure(input_file, user_working_directory=''):
 
         # For algorithm = 'script'
         mutation_script: typing.List[typing.List[str]] = []
-        # todo: add option for script algorithm to skip WT?
 
         # For algorithms 'monte_carlo', 'covariance_saturation', and 'subnetwork_hotspots'
         covariance_reference_resid: int = -1
         immutable: typing.List[int] = []
 
         # For algorithm = 'monte_carlo'
+        min_plurality: int = 1
         max_plurality: int = 3
         plural_penalty: float = 1
         skip_wt: bool = False
         shared_history_file: str = ''
+
+        # For algorithm = 'predictor_guided'
+        imported_history_file: str = ''     # todo: should this be combined with shared_history_file?
 
         # Linear Interaction Energy parameters
         ts_mask: str = ''
@@ -101,12 +105,16 @@ def configure(input_file, user_working_directory=''):
         lie_decomposed: bool = False
 
         # Stability model parameters
-        stabilitymodel: str = 'ddgunmean'
+        stability_model: str = 'ddgunmean'
         destabilization_cutoff: float = -3.0
+
+        # Termination criteria
+        max_steps_per_thread: int = 0   # 0 means no limit
 
         # Other
         restart_terminated_threads: bool = True
         pH: float = 7
+        resubmit_on_failure: int = 1    # resubmit this many times after failure
 
         # Custom Amber force fields, if required
         paths_to_forcefields: typing.List[str] = ['']

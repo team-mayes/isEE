@@ -6,9 +6,11 @@ from StabilityModel and implements its abstract methods.
 import os
 import abc
 import sys
+import time
 import numpy
 import mdtraj
 import pytraj
+import fileinput
 from subprocess import Popen, PIPE
 
 class StabilityModel(abc.ABC):
@@ -77,6 +79,15 @@ class DDGunMean(StabilityModel):
         traj = pytraj.strip(traj, '!:' + ','.join(all_resnames[0]))         # strip out everything but protein
         pytraj.write_traj('stability.pdb', traj, 'pdb', overwrite=True)     # write pdb of just protein
 
+        # Convert all protonated residue names in pdb file to standard names for compatibility with ddgun
+        for line in fileinput.input('stability.pdb', inplace=True):
+            print(line.replace(
+                ' ASH ', ' ASP ').replace(
+                ' GLH ', ' GLU ').replace(
+                ' HIP ', ' HIS ').replace(
+                ' HID ', ' HIS ').replace(
+                ' HIE ', ' HIS '), end='')
+
         # Prepare FASTA sequence file
         mtraj = mdtraj.load(ref_rst, top=ref_top)
         seq = [str(atom)[0:3] for atom in mtraj.topology.atoms if (atom.residue.is_protein and (atom.name == 'CA'))]
@@ -133,6 +144,15 @@ class DDGun3D(StabilityModel):
         traj = pytraj.strip(traj, '!:' + ','.join(all_resnames[0]))         # strip out everything but protein
         pytraj.write_traj('stability.pdb', traj, 'pdb', overwrite=True)     # write pdb of just protein
 
+        # Convert all protonated residue names in pdb file to standard names for compatibility with ddgun
+        for line in fileinput.input('stability.pdb', inplace=True):
+            print(line.replace(
+                ' ASH ', ' ASP ').replace(
+                ' GLH ', ' GLU ').replace(
+                ' HIP ', ' HIS ').replace(
+                ' HID ', ' HIS ').replace(
+                ' HIE ', ' HIS '), end='')
+
         # Prepare FASTA sequence
         mtraj = mdtraj.load(ref_rst, top=ref_top)
         seq = [str(atom)[0:3] for atom in mtraj.topology.atoms if (atom.residue.is_protein and (atom.name == 'CA'))]
@@ -144,14 +164,22 @@ class DDGun3D(StabilityModel):
         mutations = [fasta[int(mut[:-1]) - 1] + mut for mut in mutations]   # convert from 123Y to X123Y based on fasta
         open('stability.muts', 'w').write(','.join(mutations))
 
-        # Call DDGun3D, store result
-        command = sys.executable + ' /home/tburgin/ddgun/ddgun_3d.py stability.pdb _ stability.muts'    # _ -> all chains   # todo: fix call to ddgun_3d.py
-        p = Popen(command.split(), stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        output, err = p.communicate()
-        try:
+        def call_ddgun3d():
+            command = sys.executable + ' /home/tburgin/ddgun/ddgun_3d.py stability.pdb _ stability.muts'  # _ -> all chains   # todo: fix call to ddgun_3d.py
+            p = Popen(command.split(), stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            output, err = p.communicate()
             result_3d = numpy.sum([float(item) for item in output.decode().split()[-2].split(',')])
+            return result_3d
+
+        # Call DDGun3D, store result
+        try:
+            result_3d = call_ddgun3d()
         except:
-            raise RuntimeError('unexpected output from ddgun_3d: ' + output.decode() + '\noutput to stderr was: ' + err.decode())
+            time.sleep(30)  # wait 30 seconds
+            try:    # try again (sometimes works, I dunno)
+                result_3d = call_ddgun3d()
+            except:
+                raise RuntimeError('unexpected output from ddgun_3d: ' + output.decode() + '\noutput to stderr was: ' + err.decode())
 
         # Take average, return
         return result_3d

@@ -12,6 +12,7 @@ import numpy
 import pytraj
 import mdtraj
 import parmed
+import shutil
 import argparse
 import fileinput
 import dill as pickle   # I think this is kosher!
@@ -216,311 +217,391 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
         Path to the newly created, mutated topology file corresponding to new_coords, named as name + '.prmtop'
 
     """
+    # So this is dumb but this function sometimes fails at or before tleap and merely needs to be rerun, most recently
+    # due to an error in writing the .mol2 files below (one of them just stopped writing mid-stream for some reason.)
+    # As a failsafe I'm building in a repeat attempt.
+    attempts = 0
+    max_attempts = 2
+    complete = False
+    while not complete and attempts < max_attempts:
+        attempts += 1
 
-    if settings.SPOOF:
-        return name + '_min.rst7', name + '_tleap.prmtop'
+        if settings.SPOOF:
+            return name + '_min.rst7', name + '_tleap.prmtop'
 
-    # todo: implement format checking on 'mutation' (and coords and topology while we're at it)
+        # todo: implement format checking on 'mutation' (and coords and topology while we're at it)
 
-    from contextlib import contextmanager
+        from contextlib import contextmanager
 
-    # Define helper function to suppress unwanted output from tleap
-    @contextmanager
-    def suppress_stderr():
-        with open(os.devnull, "w") as devnull:
-            old_stderr = sys.stderr
-            sys.stderr = devnull
-            try:
-                yield
-            finally:
-                sys.stderr = old_stderr
-
-    # Force runtime to working directory; should not be necessary, but might be anyway...
-    os.chdir(settings.working_directory)
-
-    ### Store box information for later
-    boxline = ''
-    lineindex = -1
-    while not boxline:  # skip any number of blank lines
-        boxline = open(coords, 'r').readlines()[lineindex]
-        lineindex -= 1
-    box_dimensions = ' '.join(boxline.split()[0:3])
-
-    # These lines get box_dimensions from the topology file, which may be different; Amber reads box dimensions from coordinate files when present
-    # box_line_index = open(topology, 'r').readlines().index('%FLAG BOX_DIMENSIONS\n')
-    # box_dimensions = ' '.join([str(float(item)) for item in open(topology, 'r').readlines()[box_line_index + 2].split()[1:]])
-
-    ### Get all non-protein, store separately as mol2 to preserve explicit atom types and topology
-    protein_resnames = ':ARG,HIS,HID,HIE,HIP,LYS,ASP,ASH,GLU,GLH,SER,THR,ASN,GLN,CYS,GLY,PRO,ALA,VAL,ILE,LEU,MET,PHE,TYR,TRP,CYX,CYM,HYP'   # todo: is this exhaustive? Is there a better way to do this?
-    traj = pytraj.load(coords, topology)
-    traj.strip(protein_resnames)
-    pytraj.write_traj(name + '_nonprot.mol2', traj, overwrite=True)
-
-    ### Remove all bond terms between atoms with non-standard bonds
-    # Going FULL KLUDGE on this because it's starting to look like doing it "right" is extremely involved.
-    open(name + '_nonprot_mod.mol2', 'w').close()
-    with open(name + '_nonprot_mod.mol2', 'a') as f:
-        atoms_yet = False
-        bonds_yet = False
-        substructure_yet = False
-        index_name_list = []
-        removed_lines = 0
-        bond_count = 0
-        for line in open(name + '_nonprot.mol2', 'r').readlines():
-            if '@<TRIPOS>ATOM' in line:
-                atoms_yet = True
-                newline = line
-                f.write(newline)
-                continue
-            if '@<TRIPOS>BOND' in line:
-                bonds_yet = True
-                atoms_yet = False
-                index_name_list = list(map(list, zip(*index_name_list)))    # transpose index_name_list
-                newline = line
-                f.write(newline)
-                continue
-            if '@<TRIPOS>SUBSTRUCTURE' in line:
-                substructure_yet = True
-                bonds_yet = False
-                newline = line
-                f.write(newline)
-                continue
-            if substructure_yet:    # a substructure line
-                newline = line
-                f.write(newline)
-                continue
-            if atoms_yet and not 'WAT' in line: # an atom line not water
-                index_name_list.append([line.split()[0], line.split()[1]])
-            if bonds_yet == False:  # a water atom line, or preamble
-                newline = line
-                f.write(newline)
-                continue
-            else:   # a bond line
-                atoms = line.split()[1:3]
+        # Define helper function to suppress unwanted output from tleap
+        @contextmanager
+        def suppress_stderr():
+            with open(os.devnull, "w") as devnull:
+                old_stderr = sys.stderr
+                sys.stderr = devnull
                 try:
-                    [index_name_list[1][index_name_list[0].index(atom)] for atom in atoms]
-                except ValueError:  # atom index not in list, so it's a WAT
-                    bond_count += 1
-                    newline = line.replace(line.split()[0], str(bond_count), 1)
+                    yield
+                finally:
+                    sys.stderr = old_stderr
+
+        # Force runtime to working directory; should not be necessary, but might be anyway...
+        os.chdir(settings.working_directory)
+
+        ### Store box information for later
+        boxline = ''
+        lineindex = -1
+        while not boxline:  # skip any number of blank lines
+            boxline = open(coords, 'r').readlines()[lineindex]
+            lineindex -= 1
+        box_dimensions = ' '.join(boxline.split()[0:3])
+
+        # These lines get box_dimensions from the topology file, which may be different; Amber reads box dimensions from coordinate files when present
+        # box_line_index = open(topology, 'r').readlines().index('%FLAG BOX_DIMENSIONS\n')
+        # box_dimensions = ' '.join([str(float(item)) for item in open(topology, 'r').readlines()[box_line_index + 2].split()[1:]])
+
+        ### Get all non-protein, store separately as mol2 to preserve explicit atom types and topology
+        protein_resnames = ':ARG,HIS,HID,HIE,HIP,LYS,ASP,ASH,GLU,GLH,SER,THR,ASN,GLN,CYS,GLY,PRO,ALA,VAL,ILE,LEU,MET,PHE,TYR,TRP,CYX,CYM,HYP'
+        protein_resnames += ','.join(settings.treat_as_protein)     # let the user tell us something else should be considered protein too
+
+        # Take a peek at the transition state definition and identify residues that are non-protein (i.e., residues that
+        # will show up in the .mol2 file in the next step) and save their coordinates
+        ts_atoms = list(set(settings.ts_bonds[0] + settings.ts_bonds[1]))
+        traj = pytraj.load(coords, topology)
+
+        # ts_reses = []
+        ts_xyzs = []
+        for atom in ts_atoms:
+            atm = traj.top.select(atom)     # get atom index
+            # resname = str(traj.top.residue((traj.top.atom(atm).resid)))[1:4]
+            xyz = traj.xyz[0][atm]
+            print(xyz)
+            ts_xyzs.append(xyz)  # coordinates of transition state atoms as a list
+
+        print(ts_xyzs)
+
+        traj.strip(protein_resnames)
+        pytraj.write_traj(name + '_nonprot.mol2', traj, overwrite=True)
+
+        ### Remove all bond terms between atoms with non-standard bonds
+
+        # def is_ts_bond(atoms, index_name_list, settings):
+        #     # Helper function to determine whether a pair of atom indices are both part of the transition state
+        #     # definition in settings.ts_bonds. index_name_list is a list of lists; 0th list is atom indices in .mol2
+        #     # file, 1st list is corresponding atom names.
+        #     unique_combinations = []    # unique combinations of residue name or number and atom name
+        #     permut = itertools.permutations(ts_reses, len(atoms))
+        #     for comb in permut:
+        #         zipped = zip(comb, [index_name_list[1][index_name_list[0].index(atom)] for atom in atoms])
+        #         unique_combinations.append(list(zipped))
+        #     unique_combinations = [item for sublist in unique_combinations for item in sublist]     # flatten list
+        #     possible_strings = [':' + unique_combinations[i][0] + '@' + unique_combinations[i][1] for i in range(len(unique_combinations))]
+        #     return all([':***@' + index_name_list[1][index_name_list[0].index(atom)] in settings.ts_bonds[0] + settings.ts_bonds[1] for atom in atoms])
+
+        open(name + '_nonprot_mod.mol2', 'w').close()
+        with open(name + '_nonprot_mod.mol2', 'a') as f:
+            atoms_yet = False
+            bonds_yet = False
+            substructure_yet = False
+            index_name_list = []
+            ts_atoms_mol2 = []
+            removed_lines = 0
+            bond_count = 0
+            for line in open(name + '_nonprot.mol2', 'r').readlines():
+                if '@<TRIPOS>ATOM' in line:
+                    atoms_yet = True
+                    newline = line
                     f.write(newline)
                     continue
-                if all([':***@' + index_name_list[1][index_name_list[0].index(atom)] in settings.ts_bonds[0] + settings.ts_bonds[1] for atom in atoms]):    # todo: can this be generalized?
-                    removed_lines += 1
+                if '@<TRIPOS>BOND' in line:
+                    bonds_yet = True
+                    atoms_yet = False
+                    index_name_list = list(map(list, zip(*index_name_list)))    # transpose index_name_list
+                    newline = line
+                    f.write(newline)
                     continue
+                if '@<TRIPOS>SUBSTRUCTURE' in line:
+                    substructure_yet = True
+                    bonds_yet = False
+                    newline = line
+                    f.write(newline)
+                    continue
+                if substructure_yet:    # a substructure line
+                    newline = line
+                    f.write(newline)
+                    continue
+                if atoms_yet and not 'WAT' in line: # an atom line not water
+                    split = line.split()
+                    print(split)
+                    print(ts_xyzs)
+                    # if the coordinates for this atom match the coordinates of any of the ts atoms...
+                    if any([all([math.isclose(float(split[2]), ts_xyzs[i][0][0], abs_tol=1e-3),
+                                 math.isclose(float(split[3]), ts_xyzs[i][0][1], abs_tol=1e-3),
+                                 math.isclose(float(split[4]), ts_xyzs[i][0][2], abs_tol=1e-3)]) for i in range(len(ts_xyzs))]):
+                        ts_atoms_mol2.append(split[0])  # add this atom index to a list of ts_atoms in the mol2
+                    index_name_list.append([split[0], split[1]])   # index, name
+                if bonds_yet == False:  # a water atom line, or preamble
+                    newline = line
+                    f.write(newline)
+                    continue
+                else:   # a bond line
+                    atoms = line.split()[1:3]
+                    try:
+                        [index_name_list[1][index_name_list[0].index(atom)] for atom in atoms]
+                    except ValueError:  # atom index not in list, so it's a WAT
+                        bond_count += 1
+                        newline = line.replace(line.split()[0], str(bond_count), 1)
+                        f.write(newline)
+                        continue
+                    if all([atom in ts_atoms_mol2 for atom in atoms]):
+                        removed_lines += 1
+                        continue
+                    else:
+                        bond_count += 1
+                        newline = line.replace(line.split()[0], str(bond_count), 1)
+                        f.write(newline)
+                        continue
+
+        # Adjust number of bonds
+        open(name + '_nonprot_mod_2.mol2', 'w').close()
+        with open(name + '_nonprot_mod_2.mol2', 'a') as f2:
+            count = 0
+            for line in open(name + '_nonprot_mod.mol2', 'r').readlines():
+                if count == 2:
+                    numbers = line.split()
+                    newline = line[::-1].replace(numbers[1][::-1], str(int(numbers[1]) - removed_lines)[::-1], 1)[::-1] # replace once from right
+                    f2.write(newline)
                 else:
-                    bond_count += 1
-                    newline = line.replace(line.split()[0], str(bond_count), 1)
-                    f.write(newline)
-                    continue
+                    f2.write(line)
+                count += 1
 
-    # Adjust number of bonds
-    open(name + '_nonprot_mod_2.mol2', 'w').close()
-    with open(name + '_nonprot_mod_2.mol2', 'a') as f2:
-        count = 0
-        for line in open(name + '_nonprot_mod.mol2', 'r').readlines():
-            if count == 2:
-                numbers = line.split()
-                newline = line[::-1].replace(numbers[1][::-1], str(int(numbers[1]) - removed_lines)[::-1], 1)[::-1] # replace once from right
-                f2.write(newline)
-            else:
-                f2.write(line)
-            count += 1
+        os.remove(name + '_nonprot_mod.mol2')
+        os.remove(name + '_nonprot.mol2')
+        os.rename(name + '_nonprot_mod_2.mol2', name + '_nonprot.mol2')
 
-    os.remove(name + '_nonprot_mod.mol2')
-    os.remove(name + '_nonprot.mol2')
-    os.rename(name + '_nonprot_mod_2.mol2', name + '_nonprot.mol2')
+        ### Cast remainder to separate .pdb
+        traj = pytraj.load(coords, topology)
+        traj.strip('!(' + protein_resnames + ')')
+        pytraj.write_traj(name + '_prot.pdb', traj, overwrite=True)
 
-    ### Cast remainder to separate .pdb
-    traj = pytraj.load(coords, topology)
-    traj.strip('!(' + protein_resnames + ')')
-    pytraj.write_traj(name + '_prot.pdb', traj, overwrite=True)
-
-    ### Mutate
-    # First, reset all titrations if we have new ones to use
-    if titrations:
+        ### Mutate
+        # First, reset all titrations
         # Rename all ASH -> ASP, GLH -> GLU, and HIP, HID, and HIE -> HIS
+        temp_titrations = []
         for line in fileinput.input(name + '_prot.pdb', inplace=True):
+            if not titrations:  # if we don't have new, explicit titrations, we want to save the old ones
+                if line.split()[0] == 'ATOM':
+                    temp_titrations.append([line.split()[3].replace(
+                        'ASH', 'ASP').replace(
+                        'GLH', 'GLU').replace(
+                        'HIP', 'HIS').replace(
+                        'HID', 'HIS').replace(
+                        'HIE', 'HIS'), line.split()[4], line.split()[3]])
+
             print(line.replace(
                 ' ASH ', ' ASP ').replace(
                 ' GLH ', ' GLU ').replace(
                 ' HIP ', ' HIS ').replace(
                 ' HID ', ' HIS ').replace(
                 ' HIE ', ' HIS '), end='')
-    pdb_to_modify = name + '_prot.pdb'
+        pdb_to_modify = name + '_prot.pdb'
+        if temp_titrations:
+            titrations = temp_titrations
 
-    # Implement Rosetta mutator, if desired
-    if settings.rosetta_mutate:
-        import pyrosetta
-        import rosetta
-        from pyrosetta import standard_packer_task
-        from pyrosetta import pose_from_file
-        from pyrosetta import Pose
-        from pyrosetta import create_score_function
-        from rosetta.utility import vector1_bool
-        from rosetta.core.chemical import aa_from_oneletter_code
-        from rosetta.protocols.minimization_packing import PackRotamersMover
-        from rosetta.core.pose import PDBInfo
+        # Implement Rosetta mutator, if desired
+        if settings.rosetta_mutate:
+            import pyrosetta
+            import rosetta
+            from pyrosetta import standard_packer_task
+            from pyrosetta import pose_from_file
+            from pyrosetta import Pose
+            from pyrosetta import create_score_function
+            from rosetta.utility import vector1_bool
+            from rosetta.core.chemical import aa_from_oneletter_code
+            from rosetta.protocols.minimization_packing import PackRotamersMover
+            from rosetta.core.pose import PDBInfo
 
-        def mutate_residue(pose, mutant_position, mutant_aa,
-                           pack_radius=0.0, pack_scorefxn=''):
-            """
-            Replaces the residue at  <mutant_position>  in  <pose>  with  <mutant_aa>
-                and repack any residues within  <pack_radius>  Angstroms of the mutating
-                residue's center (nbr_atom) using  <pack_scorefxn>
-            note: <mutant_aa>  is the single letter name for the desired ResidueType
+            def mutate_residue(pose, mutant_position, mutant_aa,
+                               pack_radius=0.0, pack_scorefxn=''):
+                """
+                Replaces the residue at  <mutant_position>  in  <pose>  with  <mutant_aa>
+                    and repack any residues within  <pack_radius>  Angstroms of the mutating
+                    residue's center (nbr_atom) using  <pack_scorefxn>
+                note: <mutant_aa>  is the single letter name for the desired ResidueType
 
-            example:
-                mutate_residue(pose,30,A)
-            See also:
-                Pose
-                PackRotamersMover
-                MutateResidue
-                pose_from_sequence
-            """
-            #### a MutateResidue Mover exists similar to this except it does not pack
-            ####    the area around the mutant residue (no pack_radius feature)
-            # mutator = MutateResidue( mutant_position , mutant_aa )
-            # mutator.apply( test_pose )
-            #
-            # Code adapted by Tucker Burgin from Evan H. Baugh, in turn adapted from Sid Chaudhury.
+                example:
+                    mutate_residue(pose,30,A)
+                See also:
+                    Pose
+                    PackRotamersMover
+                    MutateResidue
+                    pose_from_sequence
+                """
+                #### a MutateResidue Mover exists similar to this except it does not pack
+                ####    the area around the mutant residue (no pack_radius feature)
+                # mutator = MutateResidue( mutant_position , mutant_aa )
+                # mutator.apply( test_pose )
+                #
+                # Code adapted by Tucker Burgin from Evan H. Baugh, in turn adapted from Sid Chaudhury.
 
-            if pose.is_fullatom() == False:
-                IOError('mutate_residue only works with fullatom poses')
+                if pose.is_fullatom() == False:
+                    raise IOError('mutate_residue only works with fullatom poses')
 
-            test_pose = Pose()
-            test_pose.assign(pose)
+                test_pose = Pose()
+                test_pose.assign(pose)
 
-            # create a beta_nov16 scorefxn by default (changes to this may require change to pyrosetta.init call)
-            if not pack_scorefxn:
-                pack_scorefxn = create_score_function('beta_nov16')
+                # create a beta_nov16 scorefxn by default (changes to this may require change to pyrosetta.init call)
+                if not pack_scorefxn:
+                    pack_scorefxn = create_score_function('beta_nov16')
 
-            task = standard_packer_task(test_pose)
+                task = standard_packer_task(test_pose)
 
-            aa_bool = rosetta.utility.vector1_bool()
-            mutant_aa = aa_from_oneletter_code(mutant_aa)
+                aa_bool = rosetta.utility.vector1_bool()
+                mutant_aa = aa_from_oneletter_code(mutant_aa)
 
-            for i in range(1, 21):
-                aa_bool.append(i == mutant_aa)
+                for i in range(1, 21):
+                    aa_bool.append(i == mutant_aa)
 
-            task.nonconst_residue_task(mutant_position).restrict_absent_canonical_aas(aa_bool)
+                task.nonconst_residue_task(mutant_position).restrict_absent_canonical_aas(aa_bool)
 
-            # prevent residues from packing by setting the per-residue "options" of the PackerTask
-            center = pose.residue(mutant_position).nbr_atom_xyz()
-            for i in range(1, pose.total_residue() + 1):
-                # only pack the mutating residue and any within the pack_radius
-                if not i == mutant_position or center.distance_squared(
-                        test_pose.residue(i).nbr_atom_xyz()) > pack_radius ** 2:
-                    task.nonconst_residue_task(i).prevent_repacking()
+                # prevent residues from packing by setting the per-residue "options" of the PackerTask
+                center = pose.residue(mutant_position).nbr_atom_xyz()
+                for i in range(1, pose.total_residue() + 1):
+                    # only pack the mutating residue and any within the pack_radius
+                    if not i == mutant_position or center.distance_squared(
+                            test_pose.residue(i).nbr_atom_xyz()) > pack_radius ** 2:
+                        task.nonconst_residue_task(i).prevent_repacking()
 
-            # apply the mutation and pack nearby residues
-            packer = PackRotamersMover(pack_scorefxn, task)
-            packer.apply(test_pose)
+                # apply the mutation and pack nearby residues
+                packer = PackRotamersMover(pack_scorefxn, task)
+                packer.apply(test_pose)
 
-            return test_pose
+                return test_pose
 
-        def convert_3_1(resname):
-            # Helper function to convert three-letter residue names to one-letter code
-            all_resnames = [['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA',
-                             'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP', 'GLH', 'ASH', 'HIP', 'HIE', 'HID', 'CYX',
-                             'CYM', 'HYP'],
-                            ['R', 'H', 'K', 'D', 'E', 'S', 'T', 'N', 'Q', 'C', 'G', 'P', 'A', 'V', 'I', 'L', 'M', 'F',
-                             'Y', 'W', 'E', 'D', 'H', 'H', 'H', 'C', 'C', 'P']]
+            def convert_3_1(resname):
+                # Helper function to convert three-letter residue names to one-letter code
+                all_resnames = [['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA',
+                                 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP', 'GLH', 'ASH', 'HIP', 'HIE', 'HID', 'CYX',
+                                 'CYM', 'HYP'],
+                                ['R', 'H', 'K', 'D', 'E', 'S', 'T', 'N', 'Q', 'C', 'G', 'P', 'A', 'V', 'I', 'L', 'M', 'F',
+                                 'Y', 'W', 'E', 'D', 'H', 'H', 'H', 'C', 'C', 'P']]
 
-            try:
-                result = all_resnames[1][all_resnames[0].index(resname.upper())]
-            except ValueError:
-                raise RuntimeError('got unknown residue name: ' + resname)
-
-            return result
-
-        pyrosetta.init('-corrections::beta_nov16')  # initialize with corrections for beta_nov16 weights
-        opt = pyrosetta.rosetta.core.import_pose.ImportPoseOptions()    # initialize pose options object
-        opt.set_keep_input_protonation_state(True)                      # don't try to protonate
-        opt.set_ignore_zero_occupancy(False)                            # don't know what this does, honestly
-        mypose = pose_from_file(name + '_prot.pdb', opt, False, pyrosetta.rosetta.core.import_pose.PDB_file)    # load pdb file
-        for mut in mutation:        # apply each mutation
-            resid = mut[:-3]
-            target = convert_3_1(mut[-3:])
-            mypose = mutate_residue(mypose, resid, target)  # here's where the actual mutation is performed
-        pyrosetta.rosetta.core.io.pdb.dump_pdb(mypose, name + '_rosetta.pdb')   # write output to a new .pdb file
-        pdb_to_modify = name + '_rosetta.pdb'   # set the output from this block as the input for the next one
-
-    with open(name + '_mutated.pdb', 'w') as f:
-        patterns = [re.compile('\s+[A-Z0-9]+\s+[A-Z]{3}\s+' + mutant[:-3] + '\s+') for mutant in mutation if mutant]
-        for line in open(pdb_to_modify, 'r').readlines():
-            if not settings.rosetta_mutate and patterns and not all(pattern.findall(line) == [] for pattern in patterns):
-                pat_index = 0
-                for pattern in patterns:
-                    try:
-                        if pattern.findall(line)[0].split()[0] in ['C','N','O','CA']:
-                            newline = line.replace(pattern.findall(line)[0].split()[1], mutation[pat_index][-3:].upper())
-                            break
-                        else:
-                            newline = ''
-                    except IndexError:  # happens when line doesn't match pattern
-                        pass
-                    pat_index += 1
-            elif titrations:  # if we were passed titration results to use and this line wasn't already mutated
                 try:
-                    titration_index = -1
+                    result = all_resnames[1][all_resnames[0].index(resname.upper())]
+                except ValueError:
+                    raise RuntimeError('got unknown residue name: ' + resname)
+
+                return result
+
+            pyrosetta.init('-corrections::beta_nov16')  # initialize with corrections for beta_nov16 weights
+            opt = pyrosetta.rosetta.core.import_pose.ImportPoseOptions()    # initialize pose options object
+            opt.set_keep_input_protonation_state(True)                      # don't try to protonate
+            opt.set_ignore_zero_occupancy(False)                            # don't know what this does, honestly
+            mypose = pose_from_file(name + '_prot.pdb', opt, False, pyrosetta.rosetta.core.import_pose.PDB_file)    # load pdb file
+            for mut in mutation:        # apply each mutation
+                if mut:     # specifically fixes issue with wild type (mut == '')
+                    resid = int(mut[:-3])
+                    target = convert_3_1(mut[-3:])
+                    mypose = mutate_residue(mypose, resid, target)  # here's where the actual mutation is performed
+            pyrosetta.rosetta.core.io.pdb.dump_pdb(mypose, name + '_rosetta.pdb')   # write output to a new .pdb file
+
+            # Rosetta does weird things to hydrogen atoms, so we're gonna remove them all and let tleap put them back
+            for line in fileinput.input(name + '_rosetta.pdb', inplace=True):
+                if not line.split() or not line.split()[0] == 'ATOM':   # non-atom
+                    print(line, end='')
+                elif 'H' in line.split()[-1]:       # hydrogen atom
+                    pass
+                else:                               # non-hydogen atom
+                    print(line, end='')
+
+            pdb_to_modify = name + '_rosetta.pdb'   # set the output from this block as the input for the next one
+
+        with open(name + '_mutated.pdb', 'w') as f:
+            patterns = [re.compile('\s+[A-Z0-9]+\s+[A-Z]{3}\s+' + mutant[:-3] + '\s+') for mutant in mutation if mutant]
+            for line in open(pdb_to_modify, 'r').readlines():
+                if not settings.rosetta_mutate and patterns and not all(pattern.findall(line) == [] for pattern in patterns):
+                    pat_index = 0
+                    for pattern in patterns:
+                        try:
+                            if pattern.findall(line)[0].split()[0] in ['C','N','O','CA']:
+                                newline = line.replace(pattern.findall(line)[0].split()[1], mutation[pat_index][-3:].upper())
+                                break
+                            else:
+                                newline = ''
+                        except IndexError:  # happens when line doesn't match pattern
+                            pass
+                        pat_index += 1
+                elif titrations:  # if we were passed titration results to use and this line wasn't already mutated
                     try:
-                        resnameandindex = [line.split()[3], line.split()[4]]
-                        titration_index = [[titration[0], titration[1]] for titration in titrations].index(
-                            resnameandindex)
-                    except IndexError:  # line doesn't have a residue listed
-                        continue
-                    if titration_index >= 0 and titrations[titration_index][0] in ['HIS', 'ASP', 'GLU'] and \
-                            not int(titrations[titration_index][1]) in settings.immutable and \
-                            not titrations[titration_index][0] == titrations[titration_index][2] and \
-                            not line.split()[2][0] == 'H':  # last statement: if this is not a hydrogen
-                        newline = line.replace(titrations[titration_index][0], titrations[titration_index][2])
-                    elif titration_index >= 0 and titrations[titration_index][0] in ['HIS', 'ASP', 'GLU'] and \
-                            not int(titrations[titration_index][1]) in settings.immutable and \
-                            not titrations[titration_index][0] == titrations[titration_index][2] and \
-                            line.split()[2][0] == 'H':  # same as above but it IS a hydrogen
-                        newline = ''
-                    else:
+                        titration_index = -1
+                        try:
+                            resnameandindex = [line.split()[3], line.split()[4]]
+                            titration_index = [[titration[0], titration[1]] for titration in titrations].index(
+                                resnameandindex)
+                        except IndexError:  # line doesn't have a residue listed
+                            newline = line
+                            f.write(newline)
+                            continue
+                        if titration_index >= 0 and titrations[titration_index][0] in ['HIS', 'ASP', 'GLU'] and \
+                                not int(titrations[titration_index][1]) in settings.immutable and \
+                                not titrations[titration_index][0] == titrations[titration_index][2] and \
+                                not line.split()[2][0] == 'H':  # last statement: if this is not a hydrogen
+                            newline = line.replace(titrations[titration_index][0], titrations[titration_index][2])
+                        elif titration_index >= 0 and titrations[titration_index][0] in ['HIS', 'ASP', 'GLU'] and \
+                                not int(titrations[titration_index][1]) in settings.immutable and \
+                                not titrations[titration_index][0] == titrations[titration_index][2] and \
+                                line.split()[2][0] == 'H':  # same as above but it IS a hydrogen
+                            newline = ''    # remove it; tleap will add it back in if appropriate
+                        else:
+                            newline = line
+                    except ValueError:  # this line doesn't correspond to an entry in titrations
                         newline = line
-                except ValueError:  # this line doesn't correspond to an entry in titrations
+                else:
                     newline = line
-            else:
-                newline = line
-            f.write(newline)
+                f.write(newline)
 
-    ### Rebuild with tleap into .rst7 and .prmtop files
-    # todo: there's no way to use tleap to do this without being forced into using Amber (or CHARMM?) force fields...
-    # todo: I need to come up with a different strategy if I want to move away from Amber-only. Really this whole thing
-    # todo: needs to be user-customizable in some way, fundamental as it is to the process as a whole.
-    try:
-        system = tleap()
-    except TypeError:
-        system = tleap.System()
-    system.pbc_type = None  # turn off automatic solvation
-    system.neutralize = False
-    system.output_path = settings.working_directory
-    system.output_prefix = name + '_tleap'
-    system.template_lines = ['source ' + item + '\n' for item in settings.paths_to_forcefields if item] + \
-        ['source leaprc.protein.ff19SB',
-        'source leaprc.GLYCAM_06j-1',
-        'source leaprc.water.opc',  # essential to load OPC last to avoid solvent model getting overwritten
-        'WAT = OP3',
-        'HOH = OP3',
-        'mut = loadpdb ' + name + '_mutated.pdb',
-        'nonprot = loadmol2 '  + name + '_nonprot.mol2',
-        'model = combine { mut nonprot }',
-        'set model box {' + box_dimensions + '}'
-    ]
-    with suppress_stderr():
+        ### Rebuild with tleap into .rst7 and .prmtop files
+        # todo: there's no way to use tleap to do this without being forced into using Amber (or CHARMM?) force fields...
+        # todo: I need to come up with a different strategy if I want to move away from Amber-only. Really this whole thing
+        # todo: needs to be user-customizable in some way, fundamental as it is to the process as a whole.
         try:
-            system.build(clean_files=False)  # produces a ton of unwanted "WARNING" messages in stderr even when successful
-        except TypeError:   # older versions don't support clean_files argument
-            system.build()
+            system = tleap()
+        except TypeError:
+            system = tleap.System()
+        system.pbc_type = None  # turn off automatic solvation
+        system.neutralize = False
+        system.output_path = settings.working_directory
+        system.output_prefix = name + '_tleap'
+        system.template_lines = ['source ' + item + '\n' for item in settings.paths_to_forcefields if item] + \
+            ['source leaprc.protein.ff19SB',
+            'source leaprc.GLYCAM_06j-1',
+            'source leaprc.water.opc',  # essential to load OPC last to avoid solvent model getting overwritten
+            'WAT = OP3',
+            'HOH = OP3',
+            'mut = loadpdb ' + name + '_mutated.pdb',
+            'nonprot = loadmol2 '  + name + '_nonprot.mol2',
+            'model = combine { mut nonprot }',
+            'set model box {' + box_dimensions + '}'
+        ]
+        with suppress_stderr():
+            try:
+                system.build(clean_files=False)  # produces a ton of unwanted "WARNING" messages in stderr even when successful
+            except TypeError:   # older versions don't support clean_files argument
+                system.build()
+        shutil.copy('leap.log', name + '_leap.log')
 
-    mutated_rst = name + '_tleap.rst7'
-    mutated_top = name + '_tleap.prmtop'
+        mutated_rst = name + '_tleap.rst7'
+        mutated_top = name + '_tleap.prmtop'
+
+        if os.path.exists(mutated_top) and os.path.exists(mutated_rst):
+            complete = True
+
+    if not complete:
+        raise RuntimeError('Unable to build ' + mutated_top + ' and ' + mutated_rst + ' for some reason.\n'
+                           'Check ' + name + '_leap.log\n'
+                           'Attempted ' + str(attempts) + ' time(s).')
 
     # Add ts_bonds to mutated_top
-    add_ts_bonds(mutated_top, settings)
+    add_ts_bonds(mutated_top, mutated_rst, settings)
 
     # If appropriate, apply calculated charges
     if settings.initialize_charges:
@@ -576,7 +657,7 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
     return to_return, mutated_top
 
 
-def add_ts_bonds(top, settings):
+def add_ts_bonds(top, rst, settings):
     """
     Add settings.ts_bonds to the given topology file using parmed. The file will be modified in place.
 
@@ -586,6 +667,8 @@ def add_ts_bonds(top, settings):
     ----------
     top : str
         Path to the topology file to modify
+    rst : str
+        Path to the restart file to modify
     settings : argparse.Namespace
         Settings namespace object
 
@@ -601,17 +684,27 @@ def add_ts_bonds(top, settings):
     except parmed.exceptions.FormatNotFound:
         raise RuntimeError('problem with topology file: ' + top + '\nDid something go wrong with tleap?')
 
+    parmed_top.load_rst7(rst)
+
     ## KLUDGE KLUDGE KLUDGE ##
-    # todo: kloooooj
-    temp_ts_bonds = copy.copy(settings.ts_bonds)
-    settings.ts_bonds = ([':260@OE2', ':443@O4',  ':443@O4', ':442@N1'],
-                         [':443@H4O', ':443@H4O', ':442@C1', ':442@C1'],
-                         [200,        200,        200,       200],
-                         [1.27,       1.23,       1.9,       2.4])
+    # todo: kloooooj; this was necessary to remove TS bonds in the mol2 file
+    temp_ts_bonds = ()
+    if settings.ts_bonds == ([':260@OE2', ':***@O4', ':***@O4', ':***@N1'],[':***@H4O', ':***@H4O', ':***@C1', ':***@C1'],[200, 200, 200, 200],[1.27, 1.23, 1.9, 2.4]):
+        temp_ts_bonds = copy.copy(settings.ts_bonds)
+        settings.ts_bonds = ([':260@OE2', ':443@O4',  ':443@O4', ':442@N1'],
+                             [':443@H4O', ':443@H4O', ':442@C1', ':442@C1'],
+                             [200,        200,        200,       200],
+                             [1.27,       1.23,       1.9,       2.4])
+    elif settings.ts_bonds == ([':***@C1', ':***@C1', ':***@O1', ':***@C1'],[':369@OG1', ':***@O1', ':369@HG1', ':233@O'],[200, 200, 200, 200],[2.2, 3.1, 1.24, 3.12]):
+        temp_ts_bonds = copy.copy(settings.ts_bonds)
+        settings.ts_bonds = ([':376@C1',    ':376@C1',  ':376@O1',  ':376@C1'],
+                             [':369@OG1',   ':376@O1',  ':369@HG1', ':233@O'],
+                             [200,          200,        200,        200],
+                             [2.2,          3.1,        1.24,       3.12])
     ## KLUDGE KLUDGE KLUDGE ##
 
-    settings.ts_bonds = list(map(list, zip(*settings.ts_bonds)))
-    for bond in settings.ts_bonds:
+    ts_bonds = list(map(list, zip(*settings.ts_bonds)))
+    for bond in ts_bonds:
         arg = [str(item) for item in bond]
         try:
             setbond = parmed.tools.actions.setBond(parmed_top, arg[0], arg[1], arg[2], arg[3])
@@ -624,10 +717,12 @@ def add_ts_bonds(top, settings):
         action = parmed.tools.actions.HMassRepartition(parmed_top)
         action.execute()
 
-    # Save the topology file with the new bonds
+    # Save the topology and coordinate files with the new bonds
     parmed_top.write_parm(top)
+    parmed_top.write_rst7(rst)
 
-    settings.ts_bonds = temp_ts_bonds   # todo: k-k-k-kludge
+    if temp_ts_bonds:
+        settings.ts_bonds = temp_ts_bonds   # todo: k-k-k-kludge
 
 
 def covariance_profile(thread, move_index, settings):
@@ -841,7 +936,7 @@ def strip_and_store(traj, top, settings):
     dry_traj_name = traj[:traj.rindex('.')] + '_dry' + traj[traj.rindex('.'):]  # insert '_dry'
     if '/' in dry_traj_name:
         dry_traj_name = dry_traj_name[traj.rindex('/') + 1:]                    # remove path, leaving only filename
-    pytraj.write_traj(settings.storage_directory + '/' + dry_traj_name, ptraj)  # save it to storage
+    pytraj.write_traj(settings.storage_directory + '/' + dry_traj_name, ptraj, overwrite=True)  # save it to storage
 
     # Topology
     ptop = pytraj.load_topology(top)
@@ -850,7 +945,7 @@ def strip_and_store(traj, top, settings):
     dry_top_name = top[:top.rindex('.')] + '_dry' + top[top.rindex('.'):]       # insert '_dry'
     if '/' in dry_top_name:
         dry_top_name = dry_top_name[traj.rindex('/') + 1:]                      # remove path, leaving only filename
-    pytraj.write_parm(settings.storage_directory + '/' + dry_top_name, ptop)    # save it to storage
+    pytraj.write_parm(settings.storage_directory + '/' + dry_top_name, ptop, overwrite=True)    # save it to storage
 
     return settings.storage_directory + '/' + dry_traj_name, settings.storage_directory + '/' + dry_top_name
 
