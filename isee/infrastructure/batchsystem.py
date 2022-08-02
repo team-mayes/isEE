@@ -6,6 +6,7 @@ BatchSystem and implements its abstract methods.
 import abc
 import subprocess
 import time
+import warnings
 
 class BatchSystem(abc.ABC):
     """
@@ -76,6 +77,24 @@ class BatchSystem(abc.ABC):
         
         pass
 
+    @abc.abstractmethod
+    def get_exit_statuses(self, jobids):
+        """
+        Return a list of exit statuses for each jobid in the list jobids
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        statuses : list
+            List of strings; each is either 'completed', 'running', 'cancelled', 'timeout', or 'other'
+
+        """
+
+        pass
+
 
 class AdaptSlurm(BatchSystem):
     """
@@ -90,7 +109,7 @@ class AdaptSlurm(BatchSystem):
         count = 1
         max_tries = 5
         output = 'first_attempt'
-        errors = ['first_attempt', 'slurm_load_jobs', 'slurm_receive_msg', 'send/recv']   # error messages to retry on
+        errors = ['first_attempt', 'slurm_load_jobs', 'slurm_receive_msg', 'send/recv', 'connect failure']   # error messages to retry on
 
         command = 'squeue -o %t --job ' + str(jobid)
         while True in [error in output for error in errors] and count <= max_tries:
@@ -124,6 +143,21 @@ class AdaptSlurm(BatchSystem):
     
     def get_submit_command(self):
         return 'sbatch {file}'
+
+    def get_exit_statuses(self, jobids):
+        statuses = []
+        for jobid in jobids:
+            command = 'sacct -j ' + str(jobid) + ' -o State'
+            process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                       close_fds=True, shell=True)
+            output = process.stdout.read().decode()     # decode converts from bytes-like to string
+            status = output.split('\n')[2].lower().strip(' ')
+            if any([item in status for item in ['completed', 'running', 'cancelled', 'timeout']]):
+                statuses.append(status)
+            else:
+                statuses.append('other')
+
+        return statuses
 
 
 class AdaptPBS(BatchSystem):
@@ -182,3 +216,8 @@ class AdaptPBS(BatchSystem):
 
     def get_submit_command(self):
         return 'qsub {file}'
+
+    def get_exit_statuses(self, jobids):
+        # todo: implement (need access to a pbs system to test on)
+        warnings.warn('get_exit_statuses is not yet implemented for PBS/Torque; returning [\'other\']')
+        return ['other']

@@ -249,22 +249,14 @@ class isEE(JobType):
     def get_initial_coordinates(self, settings):
         list_to_return = []
         for item in settings.initial_coordinates:
-            if settings.degeneracy > 1:     # implements degeneracy option
-                og_item = item
-                if '/' in item:
-                    item = item[item.rindex('/') + 1:]
-                list_to_return += [item + '_' + str(this_index) for this_index in range(settings.degeneracy)]
-                for file_to_make in list_to_return:
-                    shutil.copy(og_item, settings.working_directory + '/' + file_to_make)
-            else:
-                og_item = item
-                if '/' in item:
-                    item = item[item.rindex('/') + 1:]
-                list_to_return += [item]
-                try:
-                    shutil.copy(og_item, settings.working_directory + '/' + item)
-                except shutil.SameFileError:
-                    pass
+            og_item = item
+            if '/' in item:
+                item = item[item.rindex('/') + 1:]
+            list_to_return += [item]
+            try:
+                shutil.copy(og_item, settings.working_directory + '/' + item)
+            except shutil.SameFileError:
+                pass
         return list_to_return
 
     def get_next_step(self, thread, settings):
@@ -291,7 +283,7 @@ class isEE(JobType):
             if kwargs['initialize']:
                 thread.history = argparse.Namespace()
                 thread.history.inpcrd = []            # list of strings; initialized by main.init_threads(), updated by algorithm
-                thread.history.trajs = []             # list of strings; updated by update_history() called by process.py
+                thread.history.trajs = []             # list of lists of strings; updated by update_history() called by process.py
                 thread.history.tops = []              # list of strings; initialized by main.init_threads(), updated by algorithm
                 thread.history.muts = []              # list of lists of strings describing mutations tested; updated by algorithm
                 thread.history.score = []             # list of scores; updated by analyze()
@@ -311,12 +303,21 @@ class isEE(JobType):
                 thread.history.trajs[thread.suffix].append(kwargs['nc'])
 
     def analyze(self, thread, settings):
+        if settings.degeneracy > 1: # todo: fix (I don't know what the problem is, if there even still is one)
+            print('skipping analyze step because it is currently incompatible with degeneracy > 1. This also means that'
+                  ' the storage directory (if specified) will not be created. Do your analysis manually.')
+            return True
+        elif settings.skip_analyze:
+            return True
         if not settings.SPOOF:  # default behavior
-            if not os.path.exists(thread.history.trajs[-1][0]) or pytraj.iterload(thread.history.trajs[-1][0], thread.history.tops[-1]).n_frames == 0:     # if the simulation didn't produce a trajectory
+            if not all([os.path.exists(traj) for traj in thread.history.trajs[-1]]) or any([pytraj.iterload(traj, thread.history.tops[-1]).n_frames == 0 for traj in thread.history.trajs[-1]]):     # if the simulation didn't produce a trajectory
                 return False
             if settings.storage_directory:  # move a 'dry' copy to storage, if we have a storage directory
                 try:
-                    dry_traj, dry_top = utilities.strip_and_store(thread.history.trajs[-1][0], thread.history.tops[-1], settings)   # I honestly have no idea why thread.history.trajs[-1] is a list here when it was a string just before?
+                    dry_trajs = []
+                    for traj in thread.history.trajs[-1]:
+                        dry_traj, dry_top = utilities.strip_and_store(traj, thread.history.tops[-1], settings)   # I honestly have no idea why thread.history.trajs[-1] is a list here when it was a string just before?
+                        dry_trajs.append(dry_traj)
                 except:
                     raise RuntimeError('strip_and_store failed with files: ' + thread.history.trajs[-1][0] + ' and ' +
                                        thread.history.tops[-1])
@@ -330,7 +331,7 @@ class isEE(JobType):
                     f.write(str(thread.history.muts[-1]) + ': ' + str(thread.history.score[-1]) + '\n')
 
             else:
-                thread.history.score.append(utilities.lie(thread.history.trajs[-1], thread.history.tops[-1], settings))
+                thread.history.score.append(utilities.lie(thread.history.trajs[-1][0], thread.history.tops[-1], settings))
         else:   # spoof behavior
             thread.history.score.append(utilities.score_spoof(settings.seq, settings.rmsd_covar, settings))
 
@@ -416,7 +417,7 @@ class isEE(JobType):
             return this_algorithm.reevaluate_idle(thread, allthreads)
 
         # If job for this thread has status 'C'ompleted/'C'anceled...
-        if thread.get_status(0, settings) == 'C':     # index 0 because there is only ever one element in thread.jobids
+        if all([thread.get_status(ii, settings) == 'C' for ii in range(len(thread.jobids))]):
             # todo: implement restarting if simulation crashed before a certain number of steps completed?
             return True
         else:

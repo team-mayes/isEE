@@ -137,7 +137,8 @@ def algorithm_factory(algorithm_toolkit):
                           'covariance_saturation': algorithm.CovarianceSaturation(),
                           'subnetwork_hotspots': algorithm.SubnetworkHotspots(),
                           'monte_carlo': algorithm.MonteCarlo(),
-                          'predictor_guided': algorithm.PredictorGuided()}
+                          'predictor_guided': algorithm.PredictorGuided(),
+                          'random': algorithm.Random()}
 
     if algorithm_toolkit not in algorithm_toolkits.keys():
         raise ValueError('unsupported Algorithm name: ' + algorithm_toolkit)

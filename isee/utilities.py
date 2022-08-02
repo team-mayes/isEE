@@ -103,8 +103,8 @@ def lie(trajectory, topology, settings):
 
     Parameters
     ----------
-    trajectory : str
-        Path to the trajectory file to analyze
+    trajectory : str or list
+        Path or list of paths to the trajectory file(s) to analyze
     topology : str
         Path to the topology file corresponding to the trajectory file
     settings : argparse.Namespace
@@ -248,24 +248,30 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
         os.chdir(settings.working_directory)
 
         ### Store box information for later
-        boxline = ''
-        lineindex = -1
-        while not boxline:  # skip any number of blank lines
-            boxline = open(coords, 'r').readlines()[lineindex]
-            lineindex -= 1
-        box_dimensions = ' '.join(boxline.split()[0:3])
+        # todo: remove this if confirmed no longer desired
+        # boxline = ''
+        # lineindex = -1
+        # while not boxline:  # skip any number of blank lines
+        #     boxline = open(coords, 'r').readlines()[lineindex]
+        #     lineindex -= 1
+        # box_dimensions = ' '.join(boxline.split()[0:3])
 
         # These lines get box_dimensions from the topology file, which may be different; Amber reads box dimensions from coordinate files when present
         # box_line_index = open(topology, 'r').readlines().index('%FLAG BOX_DIMENSIONS\n')
         # box_dimensions = ' '.join([str(float(item)) for item in open(topology, 'r').readlines()[box_line_index + 2].split()[1:]])
 
-        ### Get all non-protein, store separately as mol2 to preserve explicit atom types and topology
+        ### FOR DEBUGGING ###
+        mutate_debug = False    # prints information for use in debugging mutate if True
+
+        # Get all non-protein, store separately as mol2 to preserve explicit atom types and topology
         protein_resnames = ':ARG,HIS,HID,HIE,HIP,LYS,ASP,ASH,GLU,GLH,SER,THR,ASN,GLN,CYS,GLY,PRO,ALA,VAL,ILE,LEU,MET,PHE,TYR,TRP,CYX,CYM,HYP'
-        protein_resnames += ','.join(settings.treat_as_protein)     # let the user tell us something else should be considered protein too
+        if settings.treat_as_protein:
+            protein_resnames += ',' + ','.join(settings.treat_as_protein)     # let the user tell us something else should be considered protein too
 
         # Take a peek at the transition state definition and identify residues that are non-protein (i.e., residues that
         # will show up in the .mol2 file in the next step) and save their coordinates
         ts_atoms = list(set(settings.ts_bonds[0] + settings.ts_bonds[1]))
+        ts_atoms_full = settings.ts_bonds[0] + settings.ts_bonds[1]
         traj = pytraj.load(coords, topology)
 
         # ts_reses = []
@@ -274,109 +280,161 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
             atm = traj.top.select(atom)     # get atom index
             # resname = str(traj.top.residue((traj.top.atom(atm).resid)))[1:4]
             xyz = traj.xyz[0][atm]
-            print(xyz)
+            try:
+                assert xyz.size == 3
+            except AssertionError:
+                raise RuntimeError('One or more atoms selection strings in the transition state definition did not '
+                                   'match exactly one atom in the topology: ' + topology + '. The first offending '
+                                   'selection found was: ' + atom + ', which matched ' + str(int(xyz.size/3)) +
+                                   ' atoms.')
             ts_xyzs.append(xyz)  # coordinates of transition state atoms as a list
 
-        print(ts_xyzs)
+        if mutate_debug:
+            print('DEBUG: ts_atoms = ' + str(ts_atoms))
+            print('DEBUG: ts_xyzs = ' + str(ts_xyzs))
 
         traj.strip(protein_resnames)
+        no_mol2 = False
+        try:
+            traj.strip(':WAT,Na+,Cl-')  # todo: remove this if no longer desired?
+        except IndexError:
+            print('System is only protein and solvent; skipping generating .mol2 file.')
+            no_mol2 = True    # caused if stripping the above would leave nothing left
         pytraj.write_traj(name + '_nonprot.mol2', traj, overwrite=True)
 
-        ### Remove all bond terms between atoms with non-standard bonds
+        def _all(arg_list):
+            # Version of all() that returns false when passed an empty list
+            if arg_list == []:
+                return False
+            else:
+                return all(arg_list)
 
-        # def is_ts_bond(atoms, index_name_list, settings):
-        #     # Helper function to determine whether a pair of atom indices are both part of the transition state
-        #     # definition in settings.ts_bonds. index_name_list is a list of lists; 0th list is atom indices in .mol2
-        #     # file, 1st list is corresponding atom names.
-        #     unique_combinations = []    # unique combinations of residue name or number and atom name
-        #     permut = itertools.permutations(ts_reses, len(atoms))
-        #     for comb in permut:
-        #         zipped = zip(comb, [index_name_list[1][index_name_list[0].index(atom)] for atom in atoms])
-        #         unique_combinations.append(list(zipped))
-        #     unique_combinations = [item for sublist in unique_combinations for item in sublist]     # flatten list
-        #     possible_strings = [':' + unique_combinations[i][0] + '@' + unique_combinations[i][1] for i in range(len(unique_combinations))]
-        #     return all([':***@' + index_name_list[1][index_name_list[0].index(atom)] in settings.ts_bonds[0] + settings.ts_bonds[1] for atom in atoms])
+        def is_ts_bond(atoms, ts_atoms_mol2, ts_atoms_mol2_indices):  # todo: this is insanely ugly
+            # Determine if the atoms in atoms constitute a ts bond
+            #  atoms : indices of atoms from mol2 file to check
+            #  ts_atoms_mol2 : indices of atoms from mol2 file corresponding to ts atoms
+            #  ts_atoms_mol2_indices : indices mapping entries in ts_atoms_mol2 to entries in ts_atoms_full
+            #  ts_atoms_full : strings matching ts atoms (not indices)
+            if not all([atom in ts_atoms_mol2 for atom in atoms]):
+                return False
 
-        open(name + '_nonprot_mod.mol2', 'w').close()
-        with open(name + '_nonprot_mod.mol2', 'a') as f:
-            atoms_yet = False
-            bonds_yet = False
-            substructure_yet = False
-            index_name_list = []
-            ts_atoms_mol2 = []
-            removed_lines = 0
-            bond_count = 0
-            for line in open(name + '_nonprot.mol2', 'r').readlines():
-                if '@<TRIPOS>ATOM' in line:
-                    atoms_yet = True
-                    newline = line
-                    f.write(newline)
-                    continue
-                if '@<TRIPOS>BOND' in line:
-                    bonds_yet = True
-                    atoms_yet = False
-                    index_name_list = list(map(list, zip(*index_name_list)))    # transpose index_name_list
-                    newline = line
-                    f.write(newline)
-                    continue
-                if '@<TRIPOS>SUBSTRUCTURE' in line:
-                    substructure_yet = True
-                    bonds_yet = False
-                    newline = line
-                    f.write(newline)
-                    continue
-                if substructure_yet:    # a substructure line
-                    newline = line
-                    f.write(newline)
-                    continue
-                if atoms_yet and not 'WAT' in line: # an atom line not water
-                    split = line.split()
-                    print(split)
-                    print(ts_xyzs)
-                    # if the coordinates for this atom match the coordinates of any of the ts atoms...
-                    if any([all([math.isclose(float(split[2]), ts_xyzs[i][0][0], abs_tol=1e-3),
-                                 math.isclose(float(split[3]), ts_xyzs[i][0][1], abs_tol=1e-3),
-                                 math.isclose(float(split[4]), ts_xyzs[i][0][2], abs_tol=1e-3)]) for i in range(len(ts_xyzs))]):
-                        ts_atoms_mol2.append(split[0])  # add this atom index to a list of ts_atoms in the mol2
-                    index_name_list.append([split[0], split[1]])   # index, name
-                if bonds_yet == False:  # a water atom line, or preamble
-                    newline = line
-                    f.write(newline)
-                    continue
-                else:   # a bond line
-                    atoms = line.split()[1:3]
-                    try:
-                        [index_name_list[1][index_name_list[0].index(atom)] for atom in atoms]
-                    except ValueError:  # atom index not in list, so it's a WAT
-                        bond_count += 1
-                        newline = line.replace(line.split()[0], str(bond_count), 1)
+            assert len(ts_atoms_full) % 2 == 0   # ts_atoms_full must be of even length
+            ts_atoms_firsthalf = [ts_atoms_full[i] for i in range(0,int(len(ts_atoms_full) / 2))]
+            ts_atoms_secondhalf = [ts_atoms_full[i] for i in range(int(len(ts_atoms_full) / 2), len(ts_atoms_full))]
+
+            relevant_indices = [ts_atoms_mol2_indices[ts_atoms_mol2.index(atoms[0])], ts_atoms_mol2_indices[ts_atoms_mol2.index(atoms[1])]]
+            relevant_atoms = [ts_atoms[relevant_index] for relevant_index in relevant_indices]
+            for ii in range(len(ts_atoms_firsthalf)):
+                if (relevant_atoms[0] == ts_atoms_firsthalf[ii] and relevant_atoms[1] == ts_atoms_secondhalf[ii]) or \
+                   (relevant_atoms[1] == ts_atoms_firsthalf[ii] and relevant_atoms[0] == ts_atoms_secondhalf[ii]):
+                    return True
+
+            if mutate_debug:
+                print('DEBUG: is_ts_bond between ts_atoms False: ')
+                print(' DEBUG: atoms = ' + str(atoms))
+                print(' DEBUG: ts_atoms_mol2 = ' + str(ts_atoms_mol2))
+                print(' DEBUG: ts_atoms_mol2_indices = ' + str(ts_atoms_mol2_indices))
+                print(' DEBUG: ts_atoms_full = ' + str(ts_atoms_full))
+
+            return False
+
+        ### Remove all bond terms between atoms with bond definitions in ts_bonds
+        if mutate_debug:
+            print('DEBUG: no_mol2 = ' + str(no_mol2))
+        if not no_mol2:
+            open(name + '_nonprot_mod.mol2', 'w').close()
+            with open(name + '_nonprot_mod.mol2', 'a') as f:
+                atoms_yet = False
+                bonds_yet = False
+                substructure_yet = False
+                index_name_list = []
+                ts_atoms_mol2 = []
+                ts_atoms_mol2_indices = []
+                removed_lines = 0
+                bond_count = 0
+                for line in open(name + '_nonprot.mol2', 'r').readlines():
+                    if '@<TRIPOS>ATOM' in line:
+                        atoms_yet = True
+                        newline = line
                         f.write(newline)
                         continue
-                    if all([atom in ts_atoms_mol2 for atom in atoms]):
-                        removed_lines += 1
+                    if '@<TRIPOS>BOND' in line:
+                        bonds_yet = True
+                        atoms_yet = False
+                        index_name_list = list(map(list, zip(*index_name_list)))    # transpose index_name_list
+                        newline = line
+                        f.write(newline)
                         continue
+                    if '@<TRIPOS>SUBSTRUCTURE' in line:
+                        substructure_yet = True
+                        bonds_yet = False
+                        newline = line
+                        f.write(newline)
+                        continue
+                    if substructure_yet:    # a substructure line
+                        newline = line
+                        f.write(newline)
+                        continue
+                    if atoms_yet and not 'WAT' in line: # an atom line not water
+                        split = line.split()
+                        if mutate_debug:
+                            print('DEBUG: coord_compare: ' + str(split))
+                        # if the coordinates for this atom match the coordinates of any of the ts atoms...
+                        coord_compare = [_all([math.isclose(float(split[2]), ts_xyzs[i][0][0], abs_tol=1e-3),
+                                         math.isclose(float(split[3]), ts_xyzs[i][0][1], abs_tol=1e-3),
+                                         math.isclose(float(split[4]), ts_xyzs[i][0][2], abs_tol=1e-3)]) for i in range(len(ts_xyzs))]
+                        if any(coord_compare):
+                            if mutate_debug:
+                                print('DEBUG: match!')
+                            ts_atoms_mol2.append(split[0])  # add this atom index to a list of ts_atoms in the mol2
+                            try:
+                                assert(coord_compare.count(True) == 1)
+                            except AssertionError:
+                                raise RuntimeError('somehow more than one transition state atom has roughly the same '
+                                                   'coordinates (to within 1e-3 nanometers in x, y, and z). This disrupts '
+                                                   'isEE\'s ability to process structures. Address this and try again.')
+                            ts_atoms_mol2_indices.append(coord_compare.index(True))    # to keep track of which atom is which
+                        index_name_list.append([split[0], split[1]])   # index, name
+                    if bonds_yet == False:  # a water atom line, or preamble
+                        newline = line
+                        f.write(newline)
+                        continue
+                    else:   # a bond line
+                        atoms = line.split()[1:3]
+                        try:
+                            [index_name_list[1][index_name_list[0].index(atom)] for atom in atoms]
+                        except ValueError:  # atom index not in list, so it's a WAT
+                            bond_count += 1
+                            newline = line.replace(line.split()[0], str(bond_count), 1)
+                            f.write(newline)
+                            continue
+                        if is_ts_bond(atoms, ts_atoms_mol2, ts_atoms_mol2_indices):
+                            if mutate_debug:
+                                print('DEBUG: is_ts_bond True: ' + str(atoms))
+                            removed_lines += 1
+                            continue
+                        else:
+                            bond_count += 1
+                            newline = line.replace(line.split()[0], str(bond_count), 1)
+                            f.write(newline)
+                            continue
+
+            # Adjust number of bonds
+            open(name + '_nonprot_mod_2.mol2', 'w').close()
+            with open(name + '_nonprot_mod_2.mol2', 'a') as f2:
+                count = 0
+                for line in open(name + '_nonprot_mod.mol2', 'r').readlines():
+                    if count == 2:
+                        numbers = line.split()
+                        newline = line[::-1].replace(numbers[1][::-1], str(int(numbers[1]) - removed_lines)[::-1], 1)[::-1] # replace once from right
+                        f2.write(newline)
                     else:
-                        bond_count += 1
-                        newline = line.replace(line.split()[0], str(bond_count), 1)
-                        f.write(newline)
-                        continue
+                        f2.write(line)
+                    count += 1
 
-        # Adjust number of bonds
-        open(name + '_nonprot_mod_2.mol2', 'w').close()
-        with open(name + '_nonprot_mod_2.mol2', 'a') as f2:
-            count = 0
-            for line in open(name + '_nonprot_mod.mol2', 'r').readlines():
-                if count == 2:
-                    numbers = line.split()
-                    newline = line[::-1].replace(numbers[1][::-1], str(int(numbers[1]) - removed_lines)[::-1], 1)[::-1] # replace once from right
-                    f2.write(newline)
-                else:
-                    f2.write(line)
-                count += 1
-
-        os.remove(name + '_nonprot_mod.mol2')
-        os.remove(name + '_nonprot.mol2')
-        os.rename(name + '_nonprot_mod_2.mol2', name + '_nonprot.mol2')
+            os.remove(name + '_nonprot_mod.mol2')
+            os.remove(name + '_nonprot.mol2')
+            os.rename(name + '_nonprot_mod_2.mol2', name + '_nonprot.mol2')
 
         ### Cast remainder to separate .pdb
         traj = pytraj.load(coords, topology)
@@ -492,7 +550,10 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
 
                 return result
 
-            pyrosetta.init('-corrections::beta_nov16')  # initialize with corrections for beta_nov16 weights
+            init_string = '-corrections::beta_nov16'
+            if not settings.rosetta_override == ['']:   # bool(['']) == True, surprisingly
+                init_string += ' -PDB_components_overrides ' + ' '.join(settings.rosetta_override)
+            pyrosetta.init(init_string)  # initialize with corrections for beta_nov16 weights
             opt = pyrosetta.rosetta.core.import_pose.ImportPoseOptions()    # initialize pose options object
             opt.set_keep_input_protonation_state(True)                      # don't try to protonate
             opt.set_ignore_zero_occupancy(False)                            # don't know what this does, honestly
@@ -580,8 +641,15 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
             'mut = loadpdb ' + name + '_mutated.pdb',
             'nonprot = loadmol2 '  + name + '_nonprot.mol2',
             'model = combine { mut nonprot }',
-            'set model box {' + box_dimensions + '}'
+            'solvateoct model OPC3BOX 8.0',
+            'addIons model Na+ 0',
+            'addIons model Cl- 0'
+            # 'set model box {' + box_dimensions + '}'
         ]
+        if no_mol2:
+            system.template_lines.remove('nonprot = loadmol2 '  + name + '_nonprot.mol2')
+            system.template_lines.remove('model = combine { mut nonprot }')
+            system.template_lines[system.template_lines.index('mut = loadpdb ' + name + '_mutated.pdb')] = 'model = loadpdb ' + name + '_mutated.pdb'
         with suppress_stderr():
             try:
                 system.build(clean_files=False)  # produces a ton of unwanted "WARNING" messages in stderr even when successful
@@ -710,7 +778,7 @@ def add_ts_bonds(top, rst, settings):
             setbond = parmed.tools.actions.setBond(parmed_top, arg[0], arg[1], arg[2], arg[3])
             setbond.execute()
         except parmed.tools.exceptions.SetParamError as e:
-            raise RuntimeError('encountered parmed.tools.exceptions.SetParamError: ' + e + '\n'
+            raise RuntimeError('encountered parmed.tools.exceptions.SetParamError: ' + str(e) + '\n'
                                'The offending bond and topology are: ' + str(arg) + ' and ' + top)
 
     if settings.hmr:

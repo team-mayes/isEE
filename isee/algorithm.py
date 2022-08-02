@@ -733,6 +733,71 @@ class MonteCarlo(Algorithm):
     def reevaluate_idle(self, thread, allthreads):
         return True    # this algorithm never returns 'IDLE', so it's always ready for the next step
 
+
+class Random(Algorithm):
+    """
+    Adapter class that chooses new mutants to explore completely randomly, excluding already attempted mutants.
+    """
+
+    def get_first_step(self, thread, allthreads, settings):
+        # if this is the first thread in allthreads and there are no history.trajs objects in any threads yet
+        if thread == allthreads[0] and not any([bool(item.history.trajs) for item in allthreads]) and not settings.skip_wt:
+            return 'WT'
+        else:
+            return Random.get_next_step(self, thread, allthreads, settings)
+
+    def get_next_step(self, thread, allthreads, settings):
+        # todo: implement any sort of termination criterion?
+
+        algorithm_history = self.build_algorithm_history(allthreads, settings)
+
+        all_resnames = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA',
+                        'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP']
+
+        WT_seq = [str(int(str(atom).replace('-CA', '')[3:]) + 1) + str(atom)[0:3] for atom in
+                  mdtraj.load_prmtop(settings.init_topology).atoms if (atom.residue.is_protein and (atom.name == 'CA'))]
+
+        # First, build list of all possible single mutants:
+        single_muts = [[str(int(resid + 1)) + res for res in all_resnames] for resid in range(len(WT_seq))
+                       if not resid + 1 in settings.immutable]
+        single_muts_temp = []
+        for item in single_muts:  # combine lists
+            single_muts_temp += item
+        single_muts = single_muts_temp
+
+        for item in WT_seq:  # remove wild type sequence from single_muts
+            if item in single_muts:
+                single_muts.remove(item)
+
+        len_all_combs = int(sum([factorial(len(single_muts)) / (factorial(r) * factorial(len(single_muts) - r)) for r in
+                                 range(settings.max_plurality + 1)]))
+        if len(algorithm_history.muts) == len_all_combs:  # no more permissible mutants
+            return 'TER'
+
+        # Implement Monte Carlo algorithm
+        comb = []
+        while not comb:  # repeat until we find a valid combination
+            for i in range(max([int(len(single_muts) / 10), 10])):
+                comb = []
+                while not comb or set(comb) in [set(item) for item in algorithm_history.muts]:  # todo: this algorithm will become slow as the sample size becomes a significant fraction of the possibility space, unsure if I should care
+                    comb = []  # reset at the start of each loop
+                    for null in range(numpy.random.randint(settings.min_plurality, settings.max_plurality + 1)):  # todo: distribute this non-equally?
+                        random_index = -1
+                        while random_index < 0 or single_muts[random_index][:-3] in [item[:-3] for item in comb]:
+                            random_index = numpy.random.randint(0, len(single_muts))
+                        comb.append(single_muts[random_index])
+
+            if comb and settings.stability_model:  # check for stability of proposed mutant
+                stability_model = factory.stability_model_factory(settings.stability_model)
+                if settings.destabilization_cutoff >= stability_model.predict(settings.initial_coordinates[0], settings.init_topology, list(comb)):
+                    comb = []
+
+        return list(comb)
+
+    def reevaluate_idle(self, thread, allthreads):
+        return True  # this algorithm never returns 'IDLE', so it's always ready for the next step
+
+
 class PredictorGuided(Algorithm):
     """
     Adapter class that chooses mutants selected by a pre-trained predictor CNN.

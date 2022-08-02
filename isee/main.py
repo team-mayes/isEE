@@ -84,6 +84,10 @@ class Thread(object):
         batchsystem = factory.batchsystem_factory(settings.batch_system)
         batchsystem.cancel_job(self.jobids[job_index], settings)
 
+    def get_exit_statuses(self, settings):
+        batchsystem = factory.batchsystem_factory(settings.batch_system)
+        return batchsystem.get_exit_statuses(self.jobids)
+
 
 def init_threads(settings):
     """
@@ -115,27 +119,53 @@ def init_threads(settings):
         if settings.restart_terminated_threads:
             for thread in allthreads:
                 thread.terminated = False
-        # Need to rerun mutate on restarting threads (unless they were doing WT)
+        running = allthreads.copy()     # just for interpret steps below as needed
+        # Handle each thread
         for thread in allthreads:
-            if not thread.history.muts[-1] == ['WT']:
-                initial_coordinates_to_mutate = settings.initial_coordinates[0]
-                if '/' in initial_coordinates_to_mutate:
-                    initial_coordinates_to_mutate = initial_coordinates_to_mutate[initial_coordinates_to_mutate.rindex('/') + 1:]
-                new_inpcrd, new_top = utilities.mutate(initial_coordinates_to_mutate, settings.init_topology,
-                                                       thread.history.muts[-1], initial_coordinates_to_mutate + '_' +
-                                                       '_'.join(thread.history.muts[-1]), settings)
-                try:
-                    assert thread.history.inpcrd[-1] == new_inpcrd
-                    assert thread.history.tops[-1] == new_top
-                except AssertionError:
-                    raise RuntimeError('Tried to rebuild mutant coordinates and topology for mutation: ' +
-                                       thread.history.muts[-1] + ' but the resulting files did not match the names of '
-                                       'the files in the corresponding thread.\n New filenames:' +
-                                       '\n ' + new_inpcrd +
-                                       '\n ' + new_top +
-                                       'Expected filenames:' +
-                                       '\n ' + thread.history.inpcrd[-1] +
-                                       '\n ' + thread.history.tops[-1])
+            # Possibilities here:
+            #  1) Last step finished, interpret was run, and thread terminated
+            #  2) Last step was interrupted before interpret and is now...
+            #     a) still running
+            #     b) finished successfully
+            #     c) cancelled prematurely
+
+            # Start by checking for case (2a) and if so, wait until it's done and prepare next step
+            if not thread.idle and not thread.gatekeeper(allthreads, settings):
+                while not thread.idle and not thread.gatekeeper(allthreads, settings):
+                    # Thread is still running; wait until thread.gatekeeper is True
+                    time.sleep(30)
+                thread.interpret(allthreads, running, settings)
+
+            # Next check for cases (1) or (2b) and if so, prepare next step if necessary
+            elif not thread.idle and all([status in ['timeout', 'completed'] for status in thread.get_exit_statuses(settings)]):
+                # Check for case (1) by seeing if next step is set up yet
+                # If interpret() has been called then thread.suffix + 1 > len(thread.history.trajs)
+                if len(thread.history.trajs) < thread.suffix + 1:   # trajs hasn't been appended to since last interpret
+                    pass    # it is set up, nothing to do
+                else:   # trajs was appended to more recently than suffix was incremented, so need interpret
+                    thread.interpret(allthreads, running, settings)
+
+            # This leaves only case (2c), in which case we rebuild the last mutant to resubmit if it's not WT
+            else:
+                if not thread.history.muts[-1] == ['WT']:
+                    initial_coordinates_to_mutate = settings.initial_coordinates[0]
+                    if '/' in initial_coordinates_to_mutate:
+                        initial_coordinates_to_mutate = initial_coordinates_to_mutate[initial_coordinates_to_mutate.rindex('/') + 1:]
+                    new_inpcrd, new_top = utilities.mutate(initial_coordinates_to_mutate, settings.init_topology,
+                                                           thread.history.muts[-1], initial_coordinates_to_mutate + '_' +
+                                                           '_'.join(thread.history.muts[-1]), settings)
+                    try:
+                        assert thread.history.inpcrd[-1] == new_inpcrd
+                        assert thread.history.tops[-1] == new_top
+                    except AssertionError:
+                        raise RuntimeError('Tried to rebuild mutant coordinates and topology for mutation: ' +
+                                           thread.history.muts[-1] + ' but the resulting files did not match the names of '
+                                           'the files in the corresponding thread.\n New filenames:' +
+                                           '\n ' + new_inpcrd +
+                                           '\n ' + new_top +
+                                           'Expected filenames:' +
+                                           '\n ' + thread.history.inpcrd[-1] +
+                                           '\n ' + thread.history.tops[-1])
 
         return allthreads
 

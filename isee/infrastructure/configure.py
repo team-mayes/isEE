@@ -63,6 +63,7 @@ def configure(input_file, user_working_directory=''):
 
         # Settings for isEE jobtype
         degeneracy: int = 0     # todo: is this working?
+        skip_analyze: bool = False
         initial_coordinates: typing.List[str] = ['']    # todo: in isEE as currently written, each thread has to have the same initial coordinates, so either change that or change this
         ts_bonds: typing.Tuple[typing.List[str], typing.List[str], typing.List[float], typing.List[float]] = [[''],[''],[-1],[-1]]
         hmr: bool = False
@@ -70,6 +71,7 @@ def configure(input_file, user_working_directory=''):
         storage_directory: str = '/'    # this '/' is removed later in configure
         dry_distance: float = 8.0
         rosetta_mutate: bool = False
+        rosetta_override: typing.List[str] = ['']  # list of .cif override files to pass to pyrosetta
         treat_as_protein: typing.List[str] = ['']  # list of strings of non-standard resnames to treat as protein
 
         # Initialize charges settings
@@ -78,6 +80,7 @@ def configure(input_file, user_working_directory=''):
         ic_qm_theory: str = 'DFTB3'
         ic_qm_cut: float = 8.0
         ic_qm_charge: int = 0
+        ic_dftb_telec: float = 0
 
         # For algorithm = 'script'
         mutation_script: typing.List[typing.List[str]] = []

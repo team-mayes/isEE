@@ -65,42 +65,49 @@ def process(thread, running, allthreads, settings, inp_override=''):
     else:
         inp = inp_override
 
-    template = settings.env.get_template(thread.get_batch_template(settings))
+    if settings.degeneracy and not name == 'ic':
+        degeneracy = ['_' + str(ii) for ii in range(settings.degeneracy)]
+    else:
+        degeneracy = ['']
 
-    these_kwargs = { 'name': thread.name + '_' + name,
-                     'nodes': eval('settings.nodes'),
-                     'taskspernode': eval('settings.ppn'),
-                     'walltime': eval('settings.walltime'),
-                     'mem': eval('settings.mem'),
-                     'solver': eval('settings.solver'),
-                     'inp': inp,
-                     'out': thread.name + '_' + name + '.out',
-                     'prmtop': this_top,
-                     'inpcrd': this_inpcrd,
-                     'rst': thread.name + '_' + name + '.rst7',
-                     'nc': thread.name + '_' + name + '.nc',
-                     'working_directory': settings.working_directory,
-                     'extra': eval('settings.extra') }
+    for degen in degeneracy:
+        template = settings.env.get_template(thread.get_batch_template(settings))
 
-    filled = template.render(these_kwargs)
-    newfilename = thread.name + '_' + name + '.' + settings.batch_system
-    try:
-        with open(newfilename, 'w') as newfile:
-            newfile.write(filled)
-            newfile.close()
-    except OSError as e:    # todo: can I come up with a fix for this before it's too late this time? I suppose the only real fix would be to name batch files using some code scheme and store a map of which names correspond to what in the history attributes of the corresponding threads (and also probably elsewhere)
-        if 'name too long' in str(e):
-            warnings.warn('Encountered too-long filename: ' + newfilename + '. Skipping submission of this thread '
-                          'to the task manager, terminating it, and continuing. Consider renaming a sample of the '
-                          'initial coordinate files you like best and starting a new isEE run. If this limitation '
-                          'is a problem for you, please raise an issue on GitHub detailing your use-case.')
-            thread.terminated = True
-            return running
-        else:
-            raise e
+        these_kwargs = { 'name': thread.name + '_' + name + degen,
+                         'nodes': eval('settings.nodes'),
+                         'taskspernode': eval('settings.ppn'),
+                         'walltime': eval('settings.walltime'),
+                         'mem': eval('settings.mem'),
+                         'solver': eval('settings.solver'),
+                         'inp': inp,
+                         'out': thread.name + '_' + name + degen + '.out',
+                         'prmtop': this_top,
+                         'inpcrd': this_inpcrd,
+                         'rst': thread.name + '_' + name + degen + '.rst7',
+                         'nc': thread.name + '_' + name + degen + '.nc',
+                         'working_directory': settings.working_directory,
+                         'extra': eval('settings.extra'),
+                         'degen': degen }
 
-    batchfiles.append(newfilename)
-    jobtype.update_history(thread, settings, **these_kwargs)
+        filled = template.render(these_kwargs)
+        newfilename = thread.name + '_' + name + degen + '.' + settings.batch_system
+        try:
+            with open(newfilename, 'w') as newfile:
+                newfile.write(filled)
+                newfile.close()
+        except OSError as e:    # todo: can I come up with a fix for this before it's too late this time? I suppose the only real fix would be to name batch files using some code scheme and store a map of which names correspond to what in the history attributes of the corresponding threads (and also probably elsewhere)
+            if 'name too long' in str(e):
+                warnings.warn('Encountered too-long filename: ' + newfilename + '. Skipping submission of this thread '
+                              'to the task manager, terminating it, and continuing. Consider renaming a sample of the '
+                              'initial coordinate files you like best and starting a new isEE run. If this limitation '
+                              'is a problem for you, please raise an issue on GitHub detailing your use-case.')
+                thread.terminated = True
+                return running
+            else:
+                raise e
+
+        batchfiles.append(newfilename)
+        jobtype.update_history(thread, settings, **these_kwargs)
 
     ### Submit batch files to task manager ###
     taskmanager = factory.taskmanager_factory(settings.task_manager)

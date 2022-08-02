@@ -64,6 +64,8 @@ def main(settings):
         f.write('\n  qm_theory=\'' + str(settings.ic_qm_theory) + '\',')
         f.write('\n  qmcut=' + str(settings.ic_qm_cut) + ',')
         f.write('\n  qmcharge=' + str(settings.ic_qm_charge) + ',')
+        if settings.ic_dftb_telec:
+            f.write('\n  dftb_telec=' + str(settings.ic_dftb_telec) + ',')
         f.write('\n  printcharges=1,')
         f.write('\n &end\n')
 
@@ -241,7 +243,7 @@ def set_charges(top):
         relative_to = pattern.findall(item[0])[0]
         if not relative_to in [item[0] for item in evaluated]:
             parsed = relative_to.replace(':', 'resid ').replace('@', ' and name "') + '"'   # quotes for literal name
-            relative_to_index = str(mtop.select(parsed)[0])
+            relative_to_index = str(int(mtop.select(parsed)[0]) + 1)     # + 1 converts from mdtraj to Amber
         else:
             internal_index = [item[0] for item in evaluated].index(relative_to)
             relative_to_index = str(evaluated[internal_index][1])

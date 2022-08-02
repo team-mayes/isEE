@@ -37,7 +37,7 @@ def interpret(thread, allthreads, running, settings):
         okay = jobtype.analyze(thread, settings)    # analyze just-completed simulation
         if not okay:    # simulation did not work for whatever reason
             try:
-                null = thread.consec_fails
+                _ = thread.consec_fails
             except AttributeError:  # for backwards compatibility with older versions that lacked this attribute
                 thread.consec_fails = 0
             if thread.consec_fails < settings.resubmit_on_failure:
