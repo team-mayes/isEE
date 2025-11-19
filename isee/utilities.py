@@ -8,6 +8,7 @@ import re
 import sys
 import copy
 import math
+import time
 import numpy
 import pytraj
 import mdtraj
@@ -217,6 +218,11 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
         Path to the newly created, mutated topology file corresponding to new_coords, named as name + '.prmtop'
 
     """
+    # if len(name) > 200:
+    #     print('WARNING: variant name is too long (>200 characters). Truncating. This may cause collisions if another '
+    #           'name has the same first 200 characters. Offending name: ' + name)
+    #     name = name[:200]
+
     # So this is dumb but this function sometimes fails at or before tleap and merely needs to be rerun, most recently
     # due to an error in writing the .mol2 files below (one of them just stopped writing mid-stream for some reason.)
     # As a failsafe I'm building in a repeat attempt.
@@ -276,18 +282,19 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
 
         # ts_reses = []
         ts_xyzs = []
-        for atom in ts_atoms:
-            atm = traj.top.select(atom)     # get atom index
-            # resname = str(traj.top.residue((traj.top.atom(atm).resid)))[1:4]
-            xyz = traj.xyz[0][atm]
-            try:
-                assert xyz.size == 3
-            except AssertionError:
-                raise RuntimeError('One or more atoms selection strings in the transition state definition did not '
-                                   'match exactly one atom in the topology: ' + topology + '. The first offending '
-                                   'selection found was: ' + atom + ', which matched ' + str(int(xyz.size/3)) +
-                                   ' atoms.')
-            ts_xyzs.append(xyz)  # coordinates of transition state atoms as a list
+        if not ts_atoms == ['']:
+            for atom in ts_atoms:
+                atm = traj.top.select(atom)     # get atom index
+                # resname = str(traj.top.residue((traj.top.atom(atm).resid)))[1:4]
+                xyz = traj.xyz[0][atm]
+                try:
+                    assert xyz.size == 3
+                except AssertionError:
+                    raise RuntimeError('One or more atoms selection strings in the transition state definition did not '
+                                       'match exactly one atom in the topology: ' + topology + '. The first offending '
+                                       'selection found was: ' + atom + ', which matched ' + str(int(xyz.size/3)) +
+                                       ' atoms.')
+                ts_xyzs.append(xyz)  # coordinates of transition state atoms as a list
 
         if mutate_debug:
             print('DEBUG: ts_atoms = ' + str(ts_atoms))
@@ -366,6 +373,8 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
                         f.write(newline)
                         continue
                     if '@<TRIPOS>SUBSTRUCTURE' in line:
+                        if not bonds_yet:   # happens if nonprot has no bonds, and breaks tleap
+                            f.write('@<TRIPOS>BOND\n')
                         substructure_yet = True
                         bonds_yet = False
                         newline = line
@@ -436,6 +445,12 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
             os.remove(name + '_nonprot.mol2')
             os.rename(name + '_nonprot_mod_2.mol2', name + '_nonprot.mol2')
 
+        ### If keep_waters, save the waters to a separate pdb
+        if settings.keep_waters:
+            traj = pytraj.load(coords, topology)
+            traj.strip('!(:WAT,HOH)')
+            pytraj.write_traj(name + '_water.pdb', traj, overwrite=True)
+
         ### Cast remainder to separate .pdb
         traj = pytraj.load(coords, topology)
         traj.strip('!(' + protein_resnames + ')')
@@ -479,7 +494,7 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
             from rosetta.core.pose import PDBInfo
 
             def mutate_residue(pose, mutant_position, mutant_aa,
-                               pack_radius=0.0, pack_scorefxn=''):
+                               pack_radius=0.0, pack_scorefxn='', settings=None):
                 """
                 Replaces the residue at  <mutant_position>  in  <pose>  with  <mutant_aa>
                     and repack any residues within  <pack_radius>  Angstroms of the mutating
@@ -499,7 +514,7 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
                 # mutator = MutateResidue( mutant_position , mutant_aa )
                 # mutator.apply( test_pose )
                 #
-                # Code adapted by Tucker Burgin from Evan H. Baugh, in turn adapted from Sid Chaudhury.
+                # Code adapted by Tucker E. Burgin from Evan H. Baugh, in turn adapted from Sid Chaudhury.
 
                 if pose.is_fullatom() == False:
                     raise IOError('mutate_residue only works with fullatom poses')
@@ -525,8 +540,9 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
                 center = pose.residue(mutant_position).nbr_atom_xyz()
                 for i in range(1, pose.total_residue() + 1):
                     # only pack the mutating residue and any within the pack_radius
-                    if not i == mutant_position or center.distance_squared(
-                            test_pose.residue(i).nbr_atom_xyz()) > pack_radius ** 2:
+                    if (not i == mutant_position or center.distance_squared(
+                            test_pose.residue(i).nbr_atom_xyz()) > pack_radius ** 2) \
+                            or i in settings.rosetta_prevent_repacking:
                         task.nonconst_residue_task(i).prevent_repacking()
 
                 # apply the mutation and pack nearby residues
@@ -562,12 +578,12 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
                 if mut:     # specifically fixes issue with wild type (mut == '')
                     resid = int(mut[:-3])
                     target = convert_3_1(mut[-3:])
-                    mypose = mutate_residue(mypose, resid, target)  # here's where the actual mutation is performed
+                    mypose = mutate_residue(mypose, resid, target, pack_radius=8, settings=settings)  # here's where the actual mutation is performed
             pyrosetta.rosetta.core.io.pdb.dump_pdb(mypose, name + '_rosetta.pdb')   # write output to a new .pdb file
 
             # Rosetta does weird things to hydrogen atoms, so we're gonna remove them all and let tleap put them back
             for line in fileinput.input(name + '_rosetta.pdb', inplace=True):
-                if not line.split() or not line.split()[0] == 'ATOM':   # non-atom
+                if not line.split() or not line.split()[0] in ['ATOM', 'HETATM']:   # non-atom
                     print(line, end='')
                 elif 'H' in line.split()[-1]:       # hydrogen atom
                     pass
@@ -641,21 +657,39 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
             'mut = loadpdb ' + name + '_mutated.pdb',
             'nonprot = loadmol2 '  + name + '_nonprot.mol2',
             'model = combine { mut nonprot }',
+             settings.tleap_extra,
             'solvateoct model OPC3BOX 8.0',
             'addIons model Na+ 0',
             'addIons model Cl- 0'
             # 'set model box {' + box_dimensions + '}'
         ]
-        if no_mol2:
-            system.template_lines.remove('nonprot = loadmol2 '  + name + '_nonprot.mol2')
+        if settings.keep_waters and not no_mol2:
+            system.template_lines = system.template_lines[:system.template_lines.index('model = combine { mut nonprot }')] + \
+                                     ['water = loadpdb ' + name + '_water.pdb',
+                                      'model = combine { mut nonprot water }'] + \
+                                     system.template_lines[system.template_lines.index('model = combine { mut nonprot }') + 1:]
+            system.template_lines.remove('solvateoct model OPC3BOX 8.0')
+        elif not settings.keep_waters and no_mol2:
+            system.template_lines.remove('nonprot = loadmol2 ' + name + '_nonprot.mol2')
             system.template_lines.remove('model = combine { mut nonprot }')
             system.template_lines[system.template_lines.index('mut = loadpdb ' + name + '_mutated.pdb')] = 'model = loadpdb ' + name + '_mutated.pdb'
+        elif settings.keep_waters and no_mol2:
+            system.template_lines = system.template_lines[:system.template_lines.index('model = combine { mut nonprot }')] + \
+                                     ['water = loadpdb ' + name + '_water.pdb',
+                                      'model = combine { mut water }'] + \
+                                     system.template_lines[system.template_lines.index('model = combine { mut nonprot }') + 1:]
+            system.template_lines.remove('nonprot = loadmol2 ' + name + '_nonprot.mol2')
+            system.template_lines.remove('solvateoct model OPC3BOX 8.0')
         with suppress_stderr():
             try:
                 system.build(clean_files=False)  # produces a ton of unwanted "WARNING" messages in stderr even when successful
             except TypeError:   # older versions don't support clean_files argument
                 system.build()
-        shutil.copy('leap.log', name + '_leap.log')
+        try:
+            shutil.copy('leap.log', name + '_leap.log')
+        except FileNotFoundError:   # encountered this once where I think it was caused by tleap being just a bit slow
+            time.sleep(10)
+            shutil.copy('leap.log', name + '_leap.log')
 
         mutated_rst = name + '_tleap.rst7'
         mutated_top = name + '_tleap.prmtop'
@@ -670,6 +704,19 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
 
     # Add ts_bonds to mutated_top
     add_ts_bonds(mutated_top, mutated_rst, settings)
+
+    # If keep_waters, we won't have box info, so use parmed to copy it over from the input topology
+    if settings.keep_waters:
+        try:
+            parmed_top = parmed.load_file(mutated_top)
+            parmed_top.load_rst7(mutated_rst)
+        except parmed.exceptions.FormatNotFound:
+            raise RuntimeError('problem with topology file: ' + top + '\nDid something go wrong with tleap?')
+
+        ref_top = parmed.load_file(settings.init_topology)
+        parmed_top.box = ref_top.box
+        parmed_top.write_parm(mutated_top)
+        parmed_top.write_rst7(mutated_rst)
 
     # If appropriate, apply calculated charges
     if settings.initialize_charges:
@@ -721,6 +768,8 @@ def mutate(coords, topology, mutation, name, settings, titrations=[]):
     os.remove(name + '_mutated.pdb')
     os.remove(name + '_prot.pdb')
     os.remove(name + '_nonprot.mol2')
+    if settings.keep_waters:
+        os.remove(name + '_water.pdb')
 
     return to_return, mutated_top
 
@@ -772,14 +821,15 @@ def add_ts_bonds(top, rst, settings):
     ## KLUDGE KLUDGE KLUDGE ##
 
     ts_bonds = list(map(list, zip(*settings.ts_bonds)))
-    for bond in ts_bonds:
-        arg = [str(item) for item in bond]
-        try:
-            setbond = parmed.tools.actions.setBond(parmed_top, arg[0], arg[1], arg[2], arg[3])
-            setbond.execute()
-        except parmed.tools.exceptions.SetParamError as e:
-            raise RuntimeError('encountered parmed.tools.exceptions.SetParamError: ' + str(e) + '\n'
-                               'The offending bond and topology are: ' + str(arg) + ' and ' + top)
+    if not ts_bonds == [['', '', -1, -1]]:  # default setting for no ts_bonds
+        for bond in ts_bonds:
+            arg = [str(item) for item in bond]
+            try:
+                setbond = parmed.tools.actions.setBond(parmed_top, arg[0], arg[1], arg[2], arg[3])
+                setbond.execute()
+            except parmed.tools.exceptions.SetParamError as e:
+                raise RuntimeError('encountered parmed.tools.exceptions.SetParamError: ' + str(e) + '\n'
+                                   'The offending bond and topology are: ' + str(arg) + ' and ' + top)
 
     if settings.hmr:
         action = parmed.tools.actions.HMassRepartition(parmed_top)

@@ -36,10 +36,9 @@ def process(thread, running, allthreads, settings, inp_override=''):
         The updated list of currently running threads after this process step
 
     """
-
     # First, check if the previous call to jobtype.algorithm flagged an 'IDLE' step, and if so, skip processing
     if thread.idle:
-        if thread not in running:   # idle threads are still running
+        if thread not in running:  # idle threads are still running
             running.append(thread)
         return running
 
@@ -53,14 +52,42 @@ def process(thread, running, allthreads, settings, inp_override=''):
         if thread in running:
             running.remove(thread)
             if running is None:
-                running = []       # to keep running as a list, even if empty
+                running = []  # to keep running as a list, even if empty
         return running
 
-    batchfiles = []         # initialize list of batch files to submit
+    batchfiles = []  # initialize list of batch files to submit
+    while len(batchfiles) < settings.nvidia_mps:
+        this_len = len(batchfiles)
+        batchfiles += process_one(thread, settings, inp_override)
+        if len(batchfiles) == this_len:     # failsafe for if process_one stops returning new batch files
+            break
+    running = submit(batchfiles, thread, running, allthreads, settings)
+    return running
+
+def process_one(thread, settings, inp_override=''):
+    """
+    Process a single step of the thread. This is called multiple times per process() call if settings.nvidia_mps > 1.
+
+    Parameters
+    ----------
+    thread : Thread()
+        The Thread object on which to act
+    settings : argparse.Namespace
+        Settings namespace object
+    inp_override : str
+        Specified input file to use in place of the one from jobtype.get_input_file (used by initialize_charges.py)
+
+    Returns
+    -------
+    batchfiles : list
+        A list of batch files created by this function.
+
+    """
+
+    batchfiles = []
     jobtype = factory.jobtype_factory(settings.job_type)    # get jobtype for calling jobtype.update_history
     this_inpcrd, this_top = jobtype.get_struct(thread)
     name = thread.current_name
-    threadis = [allthreads.index(thread)]
 
     if not inp_override:
         inp = jobtype.get_input_file(thread, settings)
@@ -105,71 +132,48 @@ def process(thread, running, allthreads, settings, inp_override=''):
                               'initial coordinate files you like best and starting a new isEE run. If this limitation '
                               'is a problem for you, please raise an issue on GitHub detailing your use-case.')
                 thread.terminated = True
-                return running
+                return []
             else:
                 raise e
 
         batchfiles.append(newfilename)
         jobtype.update_history(thread, settings, **these_kwargs)
+    return batchfiles
+
+def submit(batchfiles, thread, running, allthreads, settings):
+    """
+    Submit batch files in a list, with support for NVIDIA MPS.
+
+    Parameters
+    ----------
+    batchfiles : list
+        A list of strings pointing to batch files ready to be submitted or combined and then submitted
+
+    Returns
+    -------
+    None
+
+    """
 
     # Support for NVIDIA MPS
     if settings.nvidia_mps > 1:
-        # Write names of batchfiles to temporary 'queue' file to track while awaiting submission
-        if not os.path.exists('mps_batchqueue.temp'):
-            open('mps_batchqueue.temp', 'w').close()
-        with open('mps_batchqueue.temp', 'a') as f:
-            for batchfile in batchfiles:
-                f.write(batchfile + '\t' + str(allthreads.index(thread)) + '\n')
+        old_batchfiles = batchfiles.copy()
+        batchfiles = mps_combine(batchfiles, settings)
+        for batchfile in old_batchfiles:    # cleanup
+            os.remove(batchfile)
 
-        readlines = open('mps_batchqueue.temp').readlines()
-        if settings.nvidia_mps > 1 and (not settings.mps_patient or len(readlines) >= settings.nvidia_mps):
-            # Pull batch file names out of the temporary queue file to prepare to submit
-            n_tosubmit = len(readlines) - (len(readlines) % settings.nvidia_mps)    # number of filenames to pull out
-            tosubmit = [line.split()[0] for line in readlines[:n_tosubmit]]
-            threadis = [int(line.split()[1]) for line in readlines[:n_tosubmit]]
-            try:
-                assert all([os.path.exists(file) for file in tosubmit])
-            except AssertionError:
-                raise RuntimeError('Attempted to submit one or more files from mps_batchqueue.temp and found they did '
-                                   'not exist. If you are seeing this message, try manually deleting that temp file '
-                                   'and restarting isEE (this may skip some steps, depending the algorithm setting)')
-            open('mps_batchqueue.temp', 'w').write(''.join(readlines[n_tosubmit:]))     # remove pulled lines from file
-
-            # Call mps_combine on pulled batch file names
-            batchfiles = mps_combine(tosubmit, settings)
-            for batchfile in tosubmit:  # clean up the original batch files
-                os.remove(batchfile)
-        elif settings.mps_patient and len(readlines) < settings.nvidia_mps:
-            # Not ready to move forward yet, so just prepare running and return
-            if thread not in running:   # the thread is still "running" while its jobs are in the queue file
-                running.append(thread)
-            thread.mps_idle = True	# but it's idle for now!
-            return running
-
-    #todo: I have introduced a problem here where now multiple threads can have their jobs submitted by a single call to
-    #todo: process(). This necessitates a different approach to managing jobids and/or the gatekeeper function.
-    #todo: track thread index in temp file?
-
-    # Prepare task manager to submit batch files to
+    ### Submit batch files to task manager ###
     taskmanager = factory.taskmanager_factory(settings.task_manager)
-    for threadi in threadis:
-        this_thread = allthreads[threadi]
-        this_thread.jobids = []      # to clear out previous jobids if any exist
+    thread.jobids = []      # to clear out previous jobids if any exist
 
-    # Do job submission and handle storing returned jobids within threads
     if settings.nvidia_mps > 1:
         jobids = []
         for file in batchfiles:
             jobids.append(taskmanager.submit_batch(file, settings))
-        assert len(jobids) > 0
 
         # Duplicate jobids as appropriate
-        for threadi in threadis:
-            this_thread = allthreads[threadi]
-            jobids = sum([[jobid for _ in range(settings.nvidia_mps)] for jobid in jobids], [])[:len(this_thread.current_type)]
-            this_thread.jobids = jobids
-            this_thread.mps_idle = False
-            assert len(jobids) > 0
+        jobids = sum([[jobid for _ in range(settings.nvidia_mps)] for jobid in jobids], [])[:len(thread.current_type)]
+        thread.jobids = jobids
     else:
         for file in batchfiles:
             thread.jobids.append(taskmanager.submit_batch(file, settings))

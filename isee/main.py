@@ -8,12 +8,13 @@ to execute various interfaced/abstracted commands.
 
 import copy
 import os
-import pickle
+import dill as pickle
 import shutil
 import sys
 import time
 from isee import interpret, process, initialize_charges, utilities
 from isee.infrastructure import factory, configure
+import cProfile
 
 
 class Thread(object):
@@ -47,6 +48,7 @@ class Thread(object):
         self.status = 'fresh thread'    # tag for current status of a thread
         self.skip_update = False        # used by restart to resubmit jobs as they were rather than doing the next step
         self.idle = False               # flag for idle thread, to facilitate parallelization of algorithms
+        self.mps_idle = False			# flag for idling caused not by algorithm but by mps_patient
         self.consec_fails = 0           # consecutive failures count
         self.moves_this_time = 0        # number of moves completed since thread was last started or restarted
 
@@ -242,7 +244,7 @@ def handle_loop_exception(running, exception, settings):
     raise exception
 
 
-def main(settings):
+def main_function(settings):
     """
     Perform the primary loop of building, submitting, monitoring, and analyzing jobs.
 
@@ -377,8 +379,17 @@ def run_main():
     except IndexError:
         working_directory = ''
     settings = configure.configure(sys.argv[1], working_directory)
-    exit_message = main(settings)
+    exit_message = main_function(settings)
     print(exit_message)
 
 if __name__ == "__main__":
-    run_main()
+    cProfile.run('run_main()')
+#if __name__ == '__main__':
+#    import cProfile
+#    # if check avoids hackery when not profiling
+#    # Optional; hackery *seems* to work fine even when not profiling, it's just wasteful
+#    if sys.modules['__main__'].__file__ == cProfile.__file__:
+#        import isee  # Imports you again (does *not* use cache or execute as __main__)
+#        globals().update(vars(isee))  # Replaces current contents with newly imported stuff
+#        sys.modules['__main__'] = isee  # Ensures pickle lookups on __main__ find matching version
+#    run_main()  # Or series of statements

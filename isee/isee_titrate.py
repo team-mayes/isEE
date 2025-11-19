@@ -15,8 +15,9 @@ import warnings
 import fileinput
 from contextlib import contextmanager
 from moleculekit.molecule import Molecule
-from moleculekit.tools.preparation import proteinPrepare
+from moleculekit.tools.preparation import proteinPrepare, systemPrepare
 from isee.utilities import mutate
+
 
 def main(rst, top):
     """
@@ -42,7 +43,6 @@ def main(rst, top):
         True if changes were made to the titration state; False if no changes were made. Also outputted to the terminal.
 
     """
-
     # Load in the settings
     try:
         settings = pickle.load(open('settings.pkl', 'rb'))
@@ -51,10 +51,14 @@ def main(rst, top):
                                 'directory it is called from, but one was not found.')
 
     # Record initial protein sequence of three-letter residue codes
-    init_seq = [str(int(str(atom).replace('-CA', '')[3:]) + 1) + str(atom)[0:3] for atom in mdtraj.load_prmtop(top).atoms if (atom.residue.is_protein and (atom.name == 'CA'))]
+    init_seq = [str(int(str(atom).replace('-CA', '')[3:]) + 1) + str(atom)[0:3] for atom in
+                mdtraj.load_prmtop(top).atoms if (atom.residue.is_protein and (atom.name == 'CA'))]
 
     # Strip out non-protein and convert to pdb format for propka using pytraj
-    protein_resnames = ':ARG,HIS,HID,HIE,HIP,LYS,ASP,ASH,GLU,GLH,SER,THR,ASN,GLN,CYS,GLY,PRO,ALA,VAL,ILE,LEU,MET,PHE,TYR,TRP,CYX,CYM,HYP'   # todo: is this exhaustive? Is there a better way to do this?
+    protein_resnames_list = ['ARG', 'HIS', 'HID', 'HIE', 'HIP', 'LYS', 'ASP', 'ASH', 'GLU', 'GLH', 'SER', 'THR', 'ASN',
+                              'GLN', 'CYS', 'GLY', 'PRO', 'ALA', 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP', 'CYX',
+                              'CYM', 'HYP'] + settings.treat_as_protein
+    protein_resnames = (':' + ','.join(protein_resnames_list))
     traj = pytraj.load(rst, top)
     traj.strip('!(' + protein_resnames + ')')
     pdbname = rst.replace('.rst7', '') + '.pdb'  # removes .rst7 extension if present, adds .pdb either way
@@ -102,13 +106,14 @@ def main(rst, top):
 
     # Run moleculekit.proteinPrepare and prepare titrations list
     mol = Molecule(pdbname)
+    #mol = systemPrepare(mol, ignore_ns_errors=True)
     with pytraj.utils.context.capture_stdout() as out:  # handy pytraj utility catches C output streams
-        molPrep, prepData = proteinPrepare(mol, pH=settings.pH, returnDetails=True)
+        molPrep, prepData = systemPrepare(mol, pH=settings.pH, return_details=True, ignore_ns_errors=True)
 
     # Extract desired information from produced prepData object
     titrations = []
     ii = 0
-    while True:     # works around the fact that the length of prepData.data.loc isn't easy to get for some reason
+    while True:  # works around the fact that the length of prepData.data.loc isn't easy to get for some reason
         try:
             titrations.append([prepData.data.loc[ii]['resname'],
                                str(prepData.data.loc[ii]['resid']),
@@ -126,7 +131,8 @@ def main(rst, top):
     os.rename(new_top, top)
 
     # Get new (titrated) protein sequence of three-letter codes
-    new_seq = [str(int(str(atom).replace('-CA', '')[3:]) + 1) + str(atom)[0:3] for atom in mdtraj.load_prmtop(top).atoms if (atom.residue.is_protein and (atom.name == 'CA'))]
+    new_seq = [str(int(str(atom).replace('-CA', '')[3:]) + 1) + str(atom)[0:3] for atom in mdtraj.load_prmtop(top).atoms
+               if (atom.residue.is_protein and (atom.name == 'CA'))]
 
     if not new_seq == init_seq:
         print(True)

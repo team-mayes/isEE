@@ -261,7 +261,23 @@ class isEE(JobType):
 
     def get_next_step(self, thread, settings):
         if thread.history.muts and thread.history.muts[-1]:
-            return '_'.join(thread.history.muts[-1])
+            nextstep = '_'.join(thread.history.muts[-1])
+            if len(nextstep) > 200:     # danger of too-long filenames, will break on unix
+                def three2one(code):
+                    # Convert standard three-letter amino acid codes to one-letter codes
+                    all_3 = ['ARG', 'HIS', 'LYS', 'ASP', 'GLU', 'SER', 'THR', 'ASN', 'GLN', 'CYS', 'GLY', 'PRO', 'ALA',
+                             'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TYR', 'TRP']
+                    all_1 = ['R', 'H', 'K', 'D', 'E', 'S', 'T', 'N', 'Q', 'C', 'G', 'P', 'A', 'V', 'I', 'L', 'M', 'F',
+                             'Y', 'W']
+                    return all_1[all_3.index(code)]
+
+                nextstep = '_'.join([item[:-3] + three2one(item[-3:]) for item in thread.history.muts[-1]])
+                if len(nextstep) > 200:
+                    nextstep = ''.join([item[:-3] + three2one(item[-3:]) for item in thread.history.muts[-1]])
+                    if len(nextstep) > 200:
+                        raise RuntimeError('List of mutations is too long, will cause filename issues: ' +
+                                           str(thread.history.muts[-1]))
+            return nextstep
         else:
             return 'unmutated'
 
@@ -282,12 +298,13 @@ class isEE(JobType):
         if 'initialize' in kwargs.keys():
             if kwargs['initialize']:
                 thread.history = argparse.Namespace()
-                thread.history.inpcrd = []            # list of strings; initialized by main.init_threads(), updated by algorithm
-                thread.history.trajs = []             # list of lists of strings; updated by update_history() called by process.py
-                thread.history.tops = []              # list of strings; initialized by main.init_threads(), updated by algorithm
-                thread.history.muts = []              # list of lists of strings describing mutations tested; updated by algorithm
-                thread.history.score = []             # list of scores; updated by analyze()
-                thread.history.timestamps = []        # list of ints representing seconds since the epoch for the end of each step; initialized by main.init_threads(), updated by algorithm
+                thread.history.inpcrd = []          # list of strings; initialized by main.init_threads(), updated by algorithm
+                thread.history.trajs = []           # list of lists of strings; updated by update_history() called by process.py
+                thread.history.tops = []            # list of strings; initialized by main.init_threads(), updated by algorithm
+                thread.history.muts = []            # list of lists of strings describing mutations tested; updated by algorithm
+                thread.history.score = []           # list of scores; updated by analyze()
+                thread.history.timestamps = []      # list of ints representing seconds since the epoch for the end of each step; initialized by main.init_threads(), updated by algorithm
+                thread.current_type = [None]        # vestigial from atesa
             if not os.path.exists(settings.working_directory + '/algorithm_history.pkl'):     # initialize algorithm_history file if necessary # todo: deprecate?
                 pickle.dump(thread.history, open(settings.working_directory + '/algorithm_history.pkl', 'wb'))  # an empty thread.history template
             if 'inpcrd' in kwargs.keys():
@@ -407,7 +424,7 @@ class isEE(JobType):
                 # Reevaluate idle for all threads
                 this_algorithm = factory.algorithm_factory(settings.algorithm)
                 for thread in allthreads:
-                    thread.idle = this_algorithm.reevaluate_idle(thread, allthreads)
+                    thread.idle = not this_algorithm.reevaluate_idle(thread, allthreads)
 
                 # If problem persists...
                 if all([this_thread.idle for this_thread in allthreads]):
@@ -415,6 +432,10 @@ class isEE(JobType):
                                    'Inspect the restart.pkl file for errors.')
             this_algorithm = factory.algorithm_factory(settings.algorithm)
             return this_algorithm.reevaluate_idle(thread, allthreads)
+        elif thread.mps_idle:	# special state for idling caused by mps_patient
+        	return False
+
+        assert len(thread.jobids) > 0
 
         # If job for this thread has status 'C'ompleted/'C'anceled...
         if all([thread.get_status(ii, settings) == 'C' for ii in range(len(thread.jobids))]):

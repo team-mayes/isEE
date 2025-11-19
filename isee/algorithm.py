@@ -16,7 +16,8 @@ import mdtraj
 import argparse
 import itertools
 import subprocess
-import tensorflow as tf
+import pandas as pd
+#import tensorflow as tf
 from isee.infrastructure import factory
 from isee import utilities
 from math import factorial
@@ -140,79 +141,102 @@ class Algorithm(abc.ABC):
         #     # algorithm_history.__dict__[key] = append_lists(current, [thread.history.__dict__[key] for thread in allthreads])
         #     algorithm_history.__dict__[key] = current + [thread.history.__dict__[key] for thread in allthreads]
 
+        # def merge_namespace(current, new):
+        #     # Helper function to merge contents of 'new' namespace into 'current' namespace, assuming both have the same
+        #     # keys, that each key corresponds to a list, and that there are the same number of entries in each list
+        #     # (i.e., all lists in 'new' have one number of entries, and all lists in 'current' have another number of
+        #     # entries).
+        #     # If a particular "column" of entries in 'new' is already present in 'current' then it is not merged.]))
+        #     try:    # assert same keys present in current and new
+        #         assert set(current.__dict__.keys()) == set(new.__dict__.keys())
+        #     except AssertionError:
+        #         raise RuntimeError('merge_namespace called with namespaces with non-matching keys.\n' +
+        #                            ' current keys(): ' + str(current.__dict__.keys()) + '\n' +
+        #                            ' new keys():     ' + str(new.__dict__.keys()))
+        #
+        #     try:    # assert each key corresponds to a list
+        #         assert all([isinstance(item, list) for item in [current.__dict__[key] for key in current.__dict__.keys()]])
+        #         assert all([isinstance(item, list) for item in [new.__dict__[key] for key in new.__dict__.keys()]])
+        #     except AssertionError:
+        #         raise RuntimeError('one or both lists in merge_namespace has at least one attribute that is not a list')
+        #
+        #     try:    # assert length of all entries in current dictionary is constant or zero
+        #         assert all([len(current.__dict__[key]) in [0, max([len(current.__dict__[kk]) for kk in current.__dict__.keys()])] for key in list(current.__dict__.keys())])
+        #     except AssertionError:
+        #         raise RuntimeError('merge_namespace called with \'current\' namespace with inconsistent row lengths: \n' +
+        #                            str(current))
+        #     for key in list(current.__dict__.keys()):
+        #         for col in range(max([len(new.__dict__[kk]) for kk in new.__dict__.keys()])):
+        #             try:
+        #                 current.__dict__[key].append(new.__dict__[key][col])
+        #             except IndexError:  # no entry at index 'col' for this key
+        #                 current.__dict__[key].append([])     # append blank list to keep columns equal in length
+        #
+        #     try:    # assert length of all entries in current dictionary is constant
+        #         assert all([len(current.__dict__[key]) == max([len(current.__dict__[kk]) for kk in current.__dict__.keys()]) for key in list(current.__dict__.keys())])
+        #     except AssertionError:
+        #         raise RuntimeError('merge_namespace PRODUCED \'current\' namespace with inconsistent row lengths '
+        #                            'despite having been called with a \'current\' and \'new\' with consistent row '
+        #                            'lengths: \n' + str(current))
+        #
+        #     # Remove duplicate and subset (identical but for missing entries) columns from current.__dict__
+        #     allkeys = [key for key in current.__dict__.keys()]  # keys in (any) specific order, for rebuilding
+        #     columns = [tuple([current.__dict__[key][col] for key in allkeys]) for col in range(len(current.__dict__[list(current.__dict__.keys())[0]]))]
+        #     columns = list(k for k,_ in itertools.groupby(columns))     # remove duplicate columns
+        #     while True:     # remove subset columns # todo: nested loops can be very slow, is this okay?
+        #         removed = False
+        #         for ii in range(len(columns)):
+        #             col = columns[ii]
+        #             for jj in range(len(columns)):
+        #                 if not jj == ii:
+        #                     cmp = columns[jj]
+        #                     if all([cmp[kk] in [[], col[kk]] for kk in range(len(cmp))]):
+        #                         columns.remove(cmp)
+        #                         removed = True
+        #                         break   # break out of jj loop
+        #             if removed:
+        #                 break   # break out of ii loop
+        #         if not removed:
+        #             break   # break while loop; only reachable if no columns were removed this iteration
+        #     current = argparse.Namespace()
+        #     for key in allkeys:
+        #         current.__dict__[key] = []              # re-initialize dictionary
+        #     for col in range(len(columns)):             # rebuild namespace
+        #         kk = 0      # kk keeps track of index within allkey
+        #         for key in allkeys:
+        #             current.__dict__[key].append(list(columns)[col][kk])
+        #             kk += 1
+        #
+        #     return current
+
         def merge_namespace(current, new):
             # Helper function to merge contents of 'new' namespace into 'current' namespace, assuming both have the same
-            # keys, that each key corresponds to a list, and that there are the same number of entries in each list.
+            # keys, that each key corresponds to a list, and that there are the same number of entries in each list
+            # (i.e., all lists in 'new' have one number of entries, and all lists in 'current' have another number of
+            # entries).
             # If a particular "column" of entries in 'new' is already present in 'current' then it is not merged.]))
-            try:    # assert same keys present in current and new
-                assert set(current.__dict__.keys()) == set(new.__dict__.keys())
-            except AssertionError:
-                raise RuntimeError('merge_namespace called with namespaces with non-matching keys.\n' +
-                                   ' current keys(): ' + str(current.__dict__.keys()) + '\n' +
-                                   ' new keys():     ' + str(new.__dict__.keys()))
-
-            try:    # assert each key corresponds to a list
-                assert all([isinstance(item, list) for item in [current.__dict__[key] for key in current.__dict__.keys()]])
-                assert all([isinstance(item, list) for item in [new.__dict__[key] for key in new.__dict__.keys()]])
-            except AssertionError:
-                raise RuntimeError('one or both lists in merge_namespace has at least one attribute that is not a list')
-
-            try:    # assert length of all entries in current dictionary is constant or zero
-                assert all([len(current.__dict__[key]) in [0, max([len(current.__dict__[kk]) for kk in current.__dict__.keys()])] for key in list(current.__dict__.keys())])
-            except AssertionError:
-                raise RuntimeError('merge_namespace called with \'current\' namespace with inconsistent row lengths: \n' +
-                                   str(current))
-            for key in list(current.__dict__.keys()):
-                for col in range(max([len(new.__dict__[kk]) for kk in new.__dict__.keys()])):
-                    try:
-                        current.__dict__[key].append(new.__dict__[key][col])
-                    except IndexError:  # no entry at index 'col' for this key
-                        current.__dict__[key].append([])     # append blank list to keep columns equal in length
-
-            try:    # assert length of all entries in current dictionary is constant
-                assert all([len(current.__dict__[key]) == max([len(current.__dict__[kk]) for kk in current.__dict__.keys()]) for key in list(current.__dict__.keys())])
-            except AssertionError:
-                raise RuntimeError('merge_namespace PRODUCED \'current\' namespace with inconsistent row lengths '
-                                   'despite having been called with a \'current\' and \'new\' with consistent row '
-                                   'lengths: \n' + str(current))
-
-            # Remove duplicate and subset (identical but for missing entries) columns from current.__dict__
-            allkeys = [key for key in current.__dict__.keys()]  # keys in (any) specific order, for rebuilding
-            columns = [tuple([current.__dict__[key][col] for key in allkeys]) for col in range(len(current.__dict__[list(current.__dict__.keys())[0]]))]
-            columns = list(k for k,_ in itertools.groupby(columns))     # remove duplicate columns
-            while True:     # remove subset columns # todo: nested loops can be very slow, is this okay?
-                removed = False
-                for ii in range(len(columns)):
-                    col = columns[ii]
-                    for jj in range(len(columns)):
-                        if not jj == ii:
-                            cmp = columns[jj]
-                            if all([cmp[kk] in [[], col[kk]] for kk in range(len(cmp))]):
-                                columns.remove(cmp)
-                                removed = True
-                                break   # break out of jj loop
-                    if removed:
-                        break   # break out of ii loop
-                if not removed:
-                    break   # break while loop; only reachable if no columns were removed this iteration
-            current = argparse.Namespace()
-            for key in allkeys:
-                current.__dict__[key] = []              # re-initialize dictionary
-            for col in range(len(columns)):             # rebuild namespace
-                kk = 0      # kk keeps track of index within allkey
-                for key in allkeys:
-                    current.__dict__[key].append(list(columns)[col][kk])
-                    kk += 1
-
-            return current
+            # # First, get lengths of current.__dict__ and new.__dict__ lists, to later restore
+            # current_lengths = [len(current.__dict__[key]) for key in list(current.__dict__.keys())]
+            # new_lengths = [len(new.__dict__[key]) for key in list(new.__dict__.keys())]
+            # lengths = list(numpy.sum([current_lengths, new_lengths], 0))
+            # This implementation accomplishes the task by converting to pandas data frames
+            current_df = pd.DataFrame.from_dict(current.__dict__, orient='index').T
+            # load sideways then transpose to accomodate empty entries by adding a NaN in place, to be removed later
+            new_df = pd.DataFrame.from_dict(new.__dict__, orient='index').T
+            merged_df = pd.concat([current_df, new_df])
+            merged_df = merged_df[~merged_df.astype(str).duplicated()]
+            merged_df = merged_df.sort_values('timestamps') # sort every column chronologically by timestamp attribute
+            merged = merged_df.to_dict('list')
+            return merged
 
         # Perform merge
         for thread in allthreads:
-            algorithm_history = merge_namespace(algorithm_history, thread.history)
+            algorithm_history.__dict__ = merge_namespace(algorithm_history, thread.history)
 
-        # Sort every column chronologically by timestamp attribute
+        # Remove extraneous NaNs
         for key in list(algorithm_history.__dict__.keys()):
-            algorithm_history.__dict__[key] = [x for _,x in sorted(zip(algorithm_history.__dict__['timestamps'], algorithm_history.__dict__[key]))]
+            algorithm_history.__dict__[key] = [x for x in algorithm_history.__dict__[key] if not (str(x).lower() == 'nan' or str(x).lower() == 'none')]
+            # algorithm_history.__dict__[key] = [x for _,x in sorted(zip(algorithm_history.__dict__['timestamps'], algorithm_history.__dict__[key]))]
 
         # Dump pickle file to 'algorithm_history.pkl' regardless of settings.shared_history_file, because every working
         # directory should have its own algorithm history object in addition to the shared one.
@@ -747,6 +771,8 @@ class Random(Algorithm):
             return Random.get_next_step(self, thread, allthreads, settings)
 
     def get_next_step(self, thread, allthreads, settings):
+        if not settings.DEBUG_TERTIME == 0 and settings.DEBUG_TERTIME < time.time():    # just for debugging something
+            return 'TER'
         # todo: implement any sort of termination criterion?
 
         algorithm_history = self.build_algorithm_history(allthreads, settings)

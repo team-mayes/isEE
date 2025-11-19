@@ -55,7 +55,7 @@ def configure(input_file, user_working_directory=''):
         mem: str = '4000mb'
         walltime: str = '02:00:00'
         solver: str = 'sander'
-        extra: str = ''
+        extra: str = 'None'
 
         # File path settings (required for all jobs, but do have sensible defaults)
         path_to_input_files: str = os.path.dirname(os.path.realpath(__file__)) + '/data/input_files'
@@ -69,13 +69,16 @@ def configure(input_file, user_working_directory=''):
         hmr: bool = False
         min_steps: int = 5000
         storage_directory: str = '/'    # this '/' is removed later in configure
-        dry_distance: float = 8.0
-        rosetta_mutate: bool = False
+        dry_distance: float = 8.0   # distance beyond which to strip out waters in utilities.strip_and_store
+        rosetta_mutate: bool = True     # use pyrosetta to mutate and repack sidechains. If False, tleap is used instead.
         rosetta_override: typing.List[str] = ['']  # list of .cif override files to pass to pyrosetta
+        rosetta_prevent_repacking: typing.List[int] = []    # list of residue indices to forbid rosetta to repack
         treat_as_protein: typing.List[str] = ['']  # list of strings of non-standard resnames to treat as protein
+        keep_waters: bool = False   # if True, all waters in the initial structure are kept during mutation and solvation is skipped
+        tleap_extra: str = ''   # custom lines to include in tleap template after building "model" object
 
         # Initialize charges settings
-        initialize_charges: bool = True
+        initialize_charges: bool = False    # if True, a single step of QM simulation is used to reinitialize charges in ic_qm_mask before each simulation
         ic_qm_mask: str = ''
         ic_qm_theory: str = 'DFTB3'
         ic_qm_cut: float = 8.0
@@ -118,18 +121,21 @@ def configure(input_file, user_working_directory=''):
         restart_terminated_threads: bool = True
         pH: float = 7
         resubmit_on_failure: int = 1    # resubmit this many times after failure
+        nvidia_mps: int = 1
+        mps_patient: bool = True    # if True, optimizes MPS efficiency by allowing different threads to use a single MPS job
 
         # Custom Amber force fields, if required
         paths_to_forcefields: typing.List[str] = ['']
 
         # Not expected to be set by user
         SPOOF: bool = False     # True causes simulations to be skipped and scores to be spoofed
-        spoof_latent = False    # internal for spoofing
-        seq = []                # internal for spoofing
-        rmsd_covar = []         # internal for spoofing
+        spoof_latent: bool = False    # internal for spoofing
+        seq: list = []                # internal for spoofing
+        rmsd_covar: list = []         # internal for spoofing
         TEST: bool = False      # True causes some functions to use much less rigorous methods, for testing purposes
         DEBUG: bool = False     # True causes some functions to return dummy values for testing purposes
         dont_dump: bool = False     # when True, prevents dumping settings to settings.pkl
+        DEBUG_TERTIME: int = 0      # for debugging, when time.time() > DEBUG_TERTIME, random algorithm returns TER
 
     # Import config file line-by-line using exec()
     try:

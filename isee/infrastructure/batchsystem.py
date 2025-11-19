@@ -95,6 +95,23 @@ class BatchSystem(abc.ABC):
 
         pass
 
+    @abc.abstractmethod
+    def mps_ignore_strings(self):
+        """
+        Return strings that, when contained in a line in a batch script file, indicate that the line should not be
+        duplicated and separated with an ampersand for use with NVIDIA MPS
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        output : list
+            List of strings
+
+        """
+
 
 class AdaptSlurm(BatchSystem):
     """
@@ -122,19 +139,28 @@ class AdaptSlurm(BatchSystem):
         if True in [error in output for error in errors] and not 'Invalid job id specified' in output:
             raise ValueError('Queried Slurm system status for jobid ' + str(jobid) + ' but got unexpected status: ' + output)
         try:
-            output = output.split('\n')[1]
+            status = output.split('\n')[-2] # [-1] is a blank line, counting from the start is dangerous
+            try:
+                assert output.split('\n')[-3] == 'ST'
+            except AssertionError:
+                if output.split('\n')[-2] == 'ST':
+                    return 'C'
+                else:
+                    raise ValueError('Queried Slurm system status for jobid ' + str(jobid) + ' but got unexpected status: '
+                                 + output)
         except IndexError:      # jobid either matches no jobs or 'invalid job id specified', which can mean same thing
-            output = 'C'        # job isn't in the queue; so it's 'C'omplete
-        if output in ['PD', 'CF']:
-            output = 'Q'
-        elif output in ['CG', 'ST'] or 'Invalid job id' in output or not output:  # 'Invalid job id' or empty output returned when job is finished in Slurm
-            output = 'C'
-        elif output == 'R':
-            output = 'R'            # just to be really explicit I guess
+            return 'C'          # job isn't in the queue; so it's 'C'omplete
+        if status in ['PD', 'CF']:
+            status = 'Q'
+        elif status in ['CG', 'ST'] or 'Invalid job id' in output or not output:  # 'Invalid job id' or empty output returned when job is finished in Slurm
+            status = 'C'
+        elif status == 'R':
+            status = 'R'            # just to be really explicit I guess
         else:
-            raise ValueError('Queried Slurm system status for jobid ' + str(jobid) + ' but got unexpected status: ' + output)
+            raise ValueError('Queried Slurm system status for jobid ' + str(jobid) + ' but got unexpected status: ' +
+                             str(output.split('\n')))
 
-        return output
+        return status
 
     def cancel_job(self, jobid, settings):
         command = 'scancel ' + str(jobid)
@@ -153,13 +179,20 @@ class AdaptSlurm(BatchSystem):
             process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                        close_fds=True, shell=True)
             output = process.stdout.read().decode()     # decode converts from bytes-like to string
-            status = output.split('\n')[2].lower().strip(' ')
+            try:
+                status = output.split('\n')[2].lower().strip(' ')
+            except IndexError:  # occurs if slurm accounting is not supported
+                statuses.append('unknown')
+                continue
             if any([item in status for item in ['completed', 'running', 'cancelled', 'timeout']]):
                 statuses.append(status)
             else:
                 statuses.append('other')
 
         return statuses
+
+    def mps_ignore_strings(self):
+        return ['#SBATCH']
 
 
 class AdaptPBS(BatchSystem):
@@ -223,3 +256,6 @@ class AdaptPBS(BatchSystem):
         # todo: implement (need access to a pbs system to test on)
         warnings.warn('get_exit_statuses is not yet implemented for PBS/Torque; returning [\'other\']')
         return ['other']
+
+    def mps_ignore_strings(self):
+        return ['#PBS']

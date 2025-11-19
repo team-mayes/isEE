@@ -70,7 +70,7 @@ class AdaptSimple(TaskManager):
         # Use a regular expression to extract the jobid from this string
         pattern = re.compile('[0-9]+')  # todo: it's not inconceivable that this should fail in some cases. Consider moving building this pattern to a method of BatchSystem.
         try:
-            return re.findall(pattern, output)[0]
+            return re.findall(pattern, output)[-1]
         except IndexError:  # no number in the output
             raise RuntimeError('unable to submit batch job: ' + filename + '\nMessage from batch system: ' + output)
 
